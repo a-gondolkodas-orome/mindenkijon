@@ -7,35 +7,45 @@
     <style>
         body {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             height: 100vh;
             background-color: #f0f0f0;
         }
+        .counter {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
         .container {
             display: grid;
-            grid-template-columns: repeat(5, 100px);
-            grid-template-rows: repeat(3, 100px);
+            grid-template-columns: repeat(5, minmax(60px, 1fr));
+            grid-template-rows: repeat(3, minmax(60px, 1fr));
             gap: 5px;
+            width: 90vmin;
+            height: 54vmin;
+            max-width: 500px;
+            max-height: 300px;
             background: white;
             padding: 10px;
             border: 2px solid #333;
         }
         .cell {
-            width: 100px;
-            height: 100px;
-            background-color: #fde992;
+            width: 100%;
+            height: 100%;
             border: 1px solid #000;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
         }
+        .yellow {
+            background-color: #fde992;
+        }
         .box {
-            width: 80px;
-            height: 80px;
-            position: absolute;
-            cursor: grab;
+            width: 80%;
+            height: 80%;
+            cursor: pointer;
             user-select: none;
             display: flex;
             justify-content: center;
@@ -54,55 +64,94 @@
             background-color: transparent;
             border: none;
         }
+        .selected {
+            outline: 3px solid blue;
+        }
+        .reset-button {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 32px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .reset-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell empty"></div>
-        <div class="cell"><div class="box green"></div></div>
-        <div class="cell empty"></div>
-        <div class="cell"><div class="box brown"></div></div>
-        <div class="cell empty"></div>
-        <div class="cell"><div class="box green"></div></div>
-        <div class="cell"><div class="box green"></div></div>
-        <div class="cell empty"></div>
-        <div class="cell"><div class="box brown"></div></div>
-        <div class="cell"><div class="box brown"></div></div>
+    <div class="counter">Lépések: <span id="moveCount">0</span></div>
+    <button class="reset-button" onclick="location.reload()">⟳</button>
+    <div class="container" id="gameBoard">
+        <div class="cell yellow"></div>
+        <div class="cell yellow"></div>
+        <div class="cell yellow"></div>
+        <div class="cell yellow"></div>
+        <div class="cell yellow"></div>
+        <div class="cell yellow empty"></div>
+        <div class="cell yellow"><div class="box green"></div></div>
+        <div class="cell yellow empty"></div>
+        <div class="cell yellow"><div class="box brown"></div></div>
+        <div class="cell yellow empty"></div>
+        <div class="cell yellow"><div class="box green"></div></div>
+        <div class="cell yellow"><div class="box green"></div></div>
+        <div class="cell yellow empty"></div>
+        <div class="cell yellow"><div class="box brown"></div></div>
+        <div class="cell yellow"><div class="box brown"></div></div>
     </div>
     <script>
+        let selectedBox = null;
+        let moveCount = 0;
+        const moveCounter = document.getElementById('moveCount');
+        
+        function getCellIndex(cell) {
+            return Array.from(cell.parentNode.children).indexOf(cell);
+        }
+        
         document.querySelectorAll('.box').forEach(box => {
-            box.addEventListener('mousedown', function (event) {
-                let shiftX = event.clientX - box.getBoundingClientRect().left;
-                let shiftY = event.clientY - box.getBoundingClientRect().top;
-                
-                box.style.position = 'absolute';
-                box.style.zIndex = 1000;
-                document.body.append(box);
-                
-                function moveAt(pageX, pageY) {
-                    box.style.left = pageX - shiftX + 'px';
-                    box.style.top = pageY - shiftY + 'px';
+            box.addEventListener('click', function () {
+                if (selectedBox) {
+                    selectedBox.classList.remove('selected');
                 }
-                
-                moveAt(event.pageX, event.pageY);
-                
-                function onMouseMove(event) {
-                    moveAt(event.pageX, event.pageY);
-                }
-                
-                document.addEventListener('mousemove', onMouseMove);
-                
-                box.addEventListener('mouseup', function () {
-                    document.removeEventListener('mousemove', onMouseMove);
-                }, { once: true });
+                selectedBox = this;
+                selectedBox.classList.add('selected');
             });
-            
-            box.ondragstart = () => false;
+        });
+        
+        document.querySelectorAll('.cell.yellow').forEach(cell => {
+            cell.addEventListener('click', function () {
+                if (selectedBox && this.children.length === 0) {
+                    let selectedCell = selectedBox.parentNode;
+                    let selectedIndex = getCellIndex(selectedCell);
+                    let targetIndex = getCellIndex(this);
+                    let container = selectedCell.parentNode;
+                    let cols = 5; 
+                    
+                    let validMove = 
+                        targetIndex === selectedIndex - 1 || // balra
+                        targetIndex === selectedIndex + 1 || // jobbra
+                        targetIndex === selectedIndex - cols || // fel
+                        targetIndex === selectedIndex + cols; // le
+                    
+                    if (validMove) {
+                        this.appendChild(selectedBox);
+                        selectedBox.classList.remove('selected');
+                        selectedBox = null;
+                        moveCount++;
+                        moveCounter.textContent = moveCount;
+                    }
+                }
+            });
         });
     </script>
 </body>
