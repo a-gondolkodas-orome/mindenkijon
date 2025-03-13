@@ -137,11 +137,7 @@
                     let container = selectedCell.parentNode;
                     let cols = 5; 
                     
-                    let validMove = 
-                        targetIndex === selectedIndex - 1 || // balra
-                        targetIndex === selectedIndex + 1 || // jobbra
-                        targetIndex === selectedIndex - cols || // fel
-                        targetIndex === selectedIndex + cols; // le
+                    let validMove = (this.className === "cell yellow");
                     
                     if (validMove) {
                         this.appendChild(selectedBox);
