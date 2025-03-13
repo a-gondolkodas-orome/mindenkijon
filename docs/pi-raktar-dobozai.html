@@ -113,11 +113,66 @@
         let selectedBox = null;
         let moveCount = 0;
         const moveCounter = document.getElementById('moveCount');
-        
+
         function getCellIndex(cell) {
             return Array.from(cell.parentNode.children).indexOf(cell);
         }
-        
+
+        function getAdjacentYellowCells(cell) {
+            const cellIndex = getCellIndex(cell);
+            const container = cell.parentNode;
+            const cols = 5;
+            const row = Math.floor(cellIndex / cols);
+            const col = cellIndex % cols;
+            const adjacentCells = [];
+
+            const possibleNeighbors = [
+                { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 } // fel, le, balra, jobbra
+            ];
+
+            possibleNeighbors.forEach(offset => {
+                const newRow = row + offset.dr;
+                const newCol = col + offset.dc;
+
+                if (newRow >= 0 && newRow < 3 && newCol >= 0 && newCol < cols) {
+                    const neighborIndex = newRow * cols + newCol;
+                    const neighborCell = container.children[neighborIndex];
+                    if (neighborCell && neighborCell.classList.contains('yellow')) {
+                        // Új ellenőrzés: nézzük meg, hogy van-e doboz a szomszédos cellában
+                        const invalidCell = neighborCell.classList.contains('empty') || neighborCell.querySelector('.box.green') || neighborCell.querySelector('.box.brown');
+                        if (!invalidCell) { // Ha nincs doboz a szomszédos cellában, akkor elérhető
+                            adjacentCells.push(neighborCell);
+                        }
+                    }
+                }
+            });
+            console.log(adjacentCells)
+            return adjacentCells;
+        }
+
+        function getReachableYellowCells(startCell) {
+            const reachableCells = [];
+            const visitedCells = new Set();
+            const queue = [startCell];
+            visitedCells.add(startCell);
+            reachableCells.push(startCell);
+
+            while (queue.length > 0) {
+                const currentCell = queue.shift();
+                const adjacentYellowCells = getAdjacentYellowCells(currentCell);
+
+                adjacentYellowCells.forEach(nextCell => {
+                    if (!visitedCells.has(nextCell)) {
+                        visitedCells.add(nextCell);
+                        queue.push(nextCell);
+                        reachableCells.push(nextCell);
+                    }
+                });
+            }
+            return reachableCells;
+        }
+
+
         document.querySelectorAll('.box').forEach(box => {
             box.addEventListener('click', function () {
                 if (selectedBox) {
@@ -127,7 +182,7 @@
                 selectedBox.classList.add('selected');
             });
         });
-        
+
         document.querySelectorAll('.cell.yellow').forEach(cell => {
             cell.addEventListener('click', function () {
                 if (selectedBox && this.children.length === 0) {
@@ -135,10 +190,17 @@
                     let selectedIndex = getCellIndex(selectedCell);
                     let targetIndex = getCellIndex(this);
                     let container = selectedCell.parentNode;
-                    let cols = 5; 
-                    
-                    let validMove = (this.className === "cell yellow");
-                    
+                    let cols = 5;
+
+                    const startCell = selectedCell; // Kiinduló pont a kiválasztott doboz cellája
+                    const reachable = getReachableYellowCells(startCell); // Elérhető cellák lekérdezése
+
+                    // Ellenőrizzük, hogy a kattintott cella benne van-e az elérhető cellák listájában
+                    const isReachableTarget = reachable.includes(this);
+
+
+                    let validMove = (this.className === "cell yellow") && isReachableTarget;
+
                     if (validMove) {
                         this.appendChild(selectedBox);
                         selectedBox.classList.remove('selected');
@@ -150,5 +212,5 @@
             });
         });
     </script>
-</body>
+    </body>
 </html>
