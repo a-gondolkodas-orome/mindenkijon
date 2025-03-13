@@ -27,7 +27,7 @@
             max-width: 500px;
             max-height: 300px;
             background: white;
-            padding: 10px;
+            padding: 20px;
             border: 2px solid #333;
         }
         .cell {
@@ -45,6 +45,21 @@
         }        
         .yellow {
             background-color: #fde992;
+        }
+        .dot { /* A .dot class stílusai */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 13px; /* Pötty mérete */
+            height: 13px; /* Pötty mérete */
+            /*background-color: black; /* Pötty színe */
+            border-radius: 50%; /* Kerek pötty */
+            z-index: 0; /* Fontos, hogy a doboz mögött legyen alapértelmezetten */
+        }
+
+        .cell.yellow:has(.box) > .dot { /* Ha a sárga cellában van .box, akkor rejtse el a pöttyöt */
+            display: none; /* Eltünteti a pöttyöt, ha van doboz a cellában */
         }
         .box {
             width: 80%;
@@ -103,15 +118,15 @@
         <div class="cell yellow"></div>
         <div class="cell yellow"></div>
         <div class="cell yellow empty"></div>
-        <div class="cell yellow"><div class="box green"></div></div>
+        <div class="cell yellow"><div class="dot brown"></div><div class="box green"></div></div>
         <div class="cell yellow empty"></div>
-        <div class="cell yellow"><div class="box brown"></div></div>
+        <div class="cell yellow"><div class="dot green"></div><div class="box brown"></div></div>
         <div class="cell yellow empty"></div>
-        <div class="cell yellow"><div class="box green"></div></div>
-        <div class="cell yellow"><div class="box green"></div></div>
+        <div class="cell yellow"><div class="dot brown"></div><div class="box green"></div></div>
+        <div class="cell yellow"><div class="dot brown"></div><div class="box green"></div></div>
         <div class="cell yellow empty"></div>
-        <div class="cell yellow"><div class="box brown"></div></div>
-        <div class="cell yellow"><div class="box brown"></div></div>
+        <div class="cell yellow"><div class="dot green"></div><div class="box brown"></div></div>
+        <div class="cell yellow"><div class="dot green"></div><div class="box brown"></div></div>
     </div>
     <script>
         let selectedBox = null;
@@ -150,7 +165,6 @@
                     }
                 }
             });
-            console.log(adjacentCells)
             return adjacentCells;
         }
 
@@ -189,7 +203,8 @@
 
         document.querySelectorAll('.cell.yellow').forEach(cell => {
             cell.addEventListener('click', function () {
-                if (selectedBox && this.children.length === 0) {
+                //if ((selectedBox && this.children.length === 0)) {
+                if ((selectedBox && this.children.length === 0) || (selectedBox && this.children.length === 1 && this.children[0].classList.contains('dot'))) {                        
                     let selectedCell = selectedBox.parentNode;
                     let selectedIndex = getCellIndex(selectedCell);
                     let targetIndex = getCellIndex(this);
