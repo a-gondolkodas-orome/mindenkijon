@@ -39,6 +39,10 @@
             align-items: center;
             position: relative;
         }
+        .cell.error-flash {
+           transition: background-color 0.4s ease-in-out; /* Átmenet a háttérszínre, 0.3 másodperc alatt, sima sebesség görbével */
+            background-color: #FF6666;
+        }        
         .yellow {
             background-color: #fde992;
         }
@@ -207,6 +211,12 @@
                         selectedBox = null;
                         moveCount++;
                         moveCounter.textContent = moveCount;
+                    } else if (!isReachableTarget && this.className === "cell yellow") {
+                        // Vizuális visszajelzés: piros felvillanás transition-nel
+                        this.classList.add('error-flash'); // Hozzáadjuk az error-flash osztályt
+                        setTimeout(() => {
+                            this.classList.remove('error-flash'); // Eltávolítjuk az error-flash osztályt rövid késleltetés után
+                        }, 400); // 300 milliszekundumos késleltetés, megegyezik a CSS transition időtartamával                    
                     }
                 }
             });
