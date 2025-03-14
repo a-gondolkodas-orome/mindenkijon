@@ -26,7 +26,7 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("webgl-canvas"), antialias: true }); // Antialias engedélyezése
         
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight, false); // Reszponzív méretezés
         document.body.appendChild(renderer.domElement);
         
         // Háttérszín beállítása
@@ -120,12 +120,15 @@
             renderer.render(scene, camera);
         }
         
-        window.addEventListener("click", () => {
+        function onTouchStart() {
             if (!isTilting) {
                 tiltDirection *= -1;
                 isTilting = true;
             }
-        });
+        }
+        
+        window.addEventListener("click", onTouchStart);
+        window.addEventListener("touchstart", onTouchStart); // Érintésvezérlés
         
         animate();
     </script>
