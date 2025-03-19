@@ -66,6 +66,7 @@
             align-items: center;
             justify-content: center;
             font-size: 14px;
+            user-select: none; /* Számok kijelölésének tiltása */
         }
 
         .input-area {
@@ -179,9 +180,8 @@
                 </div>
             </div>
             <div class="section">
-                <button id="restartButton">⟳ Újrakezdem</button>
                 <div id="questionCount">Kérdések száma: 0</div>
-                <div id="results"></div>
+                <button id="restartButton">⟳ Újrakezdem</button>
             </div>
         </div>
     </div>
@@ -191,7 +191,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             let guessed = false;
             let guessCount = 0;
-            const resultsDiv = document.getElementById("results");
             const numbers = document.querySelectorAll(".number");
             const guessInput = document.getElementById("guessInput");
             const guessButton = document.getElementById("guessButton");
@@ -203,16 +202,15 @@
             let guesses = [];
 
             function resetGame() {
-
                 guessed = false;
                 guessCount = 0;
-                resultsDiv.innerHTML = "";
                 nearNumbersDiv.innerHTML = "";
                 questionCountDiv.textContent = "Kérdések száma: 0";
                 possibleNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
                 guesses = [];
                 guessInput.style.display = "block";
                 guessButton.style.display = "block";
+                guessInputLabel.style.display = "block";
                 guessInput.value = "";
                 resultMessageDiv.innerHTML = "";
             }
@@ -250,7 +248,7 @@
                     if (userGuess >= 1 && userGuess <= 10) {
                         let message = "";
                         if (possibleNumbers.length === 1 && possibleNumbers[0] === userGuess) {
-                            message = `Talált! A gondolt szám a(z) ${userGuess} volt.<br> Gratulálunk, ${guessCount} kérdésből találtad ki.`;
+                            message = `Talált! A gondolt szám a(z) ${userGuess} volt.<br> Gratulálunk, összesen ${guessCount} kérdésből találtad ki.`;
                             guessInput.style.display = "none";
                             guessInputLabel.style.display = "none";
                             guessButton.style.display = "none";
