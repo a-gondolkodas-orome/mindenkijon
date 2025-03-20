@@ -203,16 +203,6 @@
             const resultMessageDiv = document.getElementById("result-message");
             let possibleNumbers = Array.from({ length: 14 }, (_, i) => i + 1);
 
-            function getFibonacci(n) {
-                let a = 0, b = 1;
-                while (b < n) {
-                    let temp = b;
-                    b = a + b;
-                    a = temp;
-                }
-                return b;
-            }
-
             function resetGame() {
                 guessed = false;
                 guessCount = 0;
@@ -235,15 +225,10 @@
 
                     let resultText = "";
                     if (guessCount === 1) {
-                        resultText = "Ez a tipped.";
+                        resultText = `Az első szám a(z) ${clickedNumber}.`;
                     } else {
                         const closerPossibilities = possibleNumbers.filter(p => Math.abs(clickedNumber - p) < Math.abs(previousGuess - p));
                         const notCloserPossibilities = possibleNumbers.filter(p => Math.abs(clickedNumber - p) >= Math.abs(previousGuess - p));
-                        const fibCloser = closerPossibilities.length;
-                        const fibNotCloser = notCloserPossibilities.length;
-                        console.log("lépés: " + guessCount);
-                        console.log("k: " + closerPossibilities + " - " + fibCloser);
-                        console.log("t: " + notCloserPossibilities + " - " + fibNotCloser);
 
                         let chosenResponse = "";
                         let updatedPossibleNumbers = []; // Javított sor
@@ -254,7 +239,7 @@
                         } else if (notCloserPossibilities.length > 0 && closerPossibilities.length === 0) {
                             chosenResponse = `A(z) ${clickedNumber} nincs közelebb, mint a(z) ${previousGuess}.`;
                             updatedPossibleNumbers = notCloserPossibilities;
-                        } else if (fibCloser > fibNotCloser) {
+                        } else if (closerPossibilities.length > notCloserPossibilities.length) {
                             chosenResponse = `A(z) ${clickedNumber} közelebb van, mint a(z) ${previousGuess}.`;
                             updatedPossibleNumbers = closerPossibilities;
                         } else {
@@ -277,14 +262,13 @@
                         let message = "";
                         if (possibleNumbers.length === 1 && possibleNumbers.includes(userGuess)) {
                             message = `Talált! A gondolt szám a(z) ${userGuess} volt.<br> Gratulálunk, összesen ${guessCount} kérdésből találtad ki.`;
-                            guessInput.style.display = "none";
-                            guessInputLabel.style.display = "none";
-                            guessButton.style.display = "none";
-                            guessed = true;
                         } else {
                             message = `Sajnos, nem talált! A(z) ${possibleNumbers.filter(number => number !== userGuess)[0]} számra gondoltam.`;
-                            guessInput.value = "";
                         }
+                        guessed = true;
+                        guessInput.style.display = "none";
+                        guessInputLabel.style.display = "none";
+                        guessButton.style.display = "none";
                         resultMessageDiv.innerHTML = message;
                     } else {
                         guessInput.value = "Kérlek, írj be egy számot 1 és 14 között.";
