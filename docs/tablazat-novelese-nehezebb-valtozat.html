@@ -54,6 +54,8 @@
       margin-top: 20px;
       font-weight: bold;
       color: green;
+      white-space: pre-line;
+      text-align: center;
     }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -93,11 +95,13 @@
   ];
 
   const targetTable = [
-    [null, 5, 3, null],
-    [8, 10, 7, 5],
-    [5, 9, 12, 8],
-    [null, 4, 8, null]
+    [null, 5, 8, null],
+    [4, 9, 10, 5],
+    [8, 12, 7, 3],
+    [null, 8, 5, null]
   ];
+
+  let checkNumber = 0;
 
   function drawTable() {
     const canvasWidth = window.innerWidth <= 600 ? 300 : 400;
@@ -156,6 +160,10 @@
         table[i][j]++;
       }
     }
+    if (x === 1 && y === 1) {
+        checkNumber++;
+        console.log(checkNumber);
+    }
     drawTable();
   }
 
@@ -210,6 +218,8 @@
       }
     }
     congratsMessageDiv.textContent = "Megoldottad a feladatot, gratulálunk!";
+    congratsMessageDiv.textContent += "\n";
+    congratsMessageDiv.textContent += `A középső gombot ${checkNumber} alkalommal nyomtad meg.`;
     return true;
   }
 
