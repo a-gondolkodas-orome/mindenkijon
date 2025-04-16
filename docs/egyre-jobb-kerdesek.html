@@ -191,9 +191,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            let guessed = false;
-            let guessCount = 0;
-            let previousGuess = null;
             const numbers = document.querySelectorAll(".number");
             const guessInput = document.getElementById("guessInput");
             const guessButton = document.getElementById("guessButton");
@@ -201,15 +198,24 @@
             const questionCountDiv = document.getElementById("questionCount");
             const nearNumbersDiv = document.getElementById("nearNumbers");
             const resultMessageDiv = document.getElementById("result-message");
-            let possibleNumbers = Array.from({ length: 14 }, (_, i) => i + 1);
+            let guessed;
+            let guessCount;
+            let previousGuess;
+            let possibleNumbers;
 
-            function resetGame() {
+            initGame();
+
+            function initGame() {
                 guessed = false;
                 guessCount = 0;
                 previousGuess = null;
+                possibleNumbers = Array.from({ length: 14 }, (_, i) => i + 1);
+            }
+            
+            function resetGame() {
+                initGame();
                 nearNumbersDiv.innerHTML = "";
                 questionCountDiv.textContent = "Kérdések száma: 0";
-                possibleNumbers = Array.from({ length: 14 }, (_, i) => i + 1);
                 guessInput.style.display = "block";
                 guessButton.style.display = "block";
                 guessInputLabel.style.display = "block";
@@ -263,7 +269,8 @@
                         if (possibleNumbers.length === 1 && possibleNumbers.includes(userGuess)) {
                             message = `Talált! A gondolt szám a(z) ${userGuess} volt.<br> Gratulálunk, összesen ${guessCount} kérdésből találtad ki.`;
                         } else {
-                            message = `Sajnos, nem talált! A(z) ${possibleNumbers.filter(number => number !== userGuess)[0]} számra gondoltam.`;
+                            possibleNumbers = [possibleNumbers.filter(number => number !== userGuess)[0]];
+                            message = `Sajnos, nem talált! A(z) ${possibleNumbers[0]} számra gondoltam.`;
                         }
                         guessed = true;
                         guessInput.style.display = "none";
