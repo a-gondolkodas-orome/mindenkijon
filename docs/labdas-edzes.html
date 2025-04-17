@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Pontok összekötése nyilakkal</title>
+<title>Labdás edzés</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   body {
@@ -11,8 +11,8 @@
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    background-color: #f4f4f4;
-    padding: 20px;
+    background-color: #fff; /* Fehér háttér */
+    padding: 30px; /* Nagyobb padding a széleken */
     box-sizing: border-box;
   }
 
@@ -21,7 +21,8 @@
     flex-direction: column; /* Mobilon egymás alatt */
     align-items: center;
     width: 100%;
-    max-width: 800px; /* Nagyobb maximális szélesség */
+    max-width: 800px;
+    margin-bottom: 15px; /* Kisebb távolság a gombhoz */
   }
 
   canvas {
@@ -29,33 +30,31 @@
     border: 1px solid #ccc;
     cursor: grab;
     margin-top: 20px;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-    max-width: 100%; /* A container szélességéhez igazodik */
-    height: auto; /* Magasság arányosan */
-    touch-action: none; /* Megakadályozza a böngésző alapértelmezett érintési műveleteit */
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.15); /* Erősebb árnyék */
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px; /* Lekerekített sarkok */
+    touch-action: none;
+    background-color: #fff; /* Explicit fehér háttér a canvas-nak */
   }
 
-  #pointCount {
-    margin-top: 20px;
-    font-size: 0.9em; /* Kisebb betűméret mobilon */
-    color: #333;
-    text-align: center;
-  }
-
-  #count {
-    font-weight: bold;
-    color: #d32f2f;
+  .button-container {
+    display: flex;
+    justify-content: center; /* Gomb középre igazítása */
+    width: 100%;
+    max-width: 800px;
   }
 
   button {
-    margin-top: 15px; /* Kisebb margó mobilon */
-    padding: 8px 16px; /* Kisebb padding mobilon */
-    font-size: 0.9em; /* Kisebb betűméret mobilon */
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 1em;
     cursor: pointer;
     background-color: #007bff;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px; /* Lekerekített sarkok */
+    transition: background-color 0.3s ease; /* Animáció a hover hatáshoz */
   }
 
   button:hover {
@@ -65,21 +64,14 @@
   /* Számítógépre (szélesebb, mint 768px) */
   @media (min-width: 769px) {
     body {
-      flex-direction: row; /* Gombok a vászon mellé */
-      justify-content: center; /* Középre igazítás vízszintesen */
-      align-items: flex-start; /* Felülre igazítás függőlegesen */
+      flex-direction: column; /* Vissza oszlopba, hogy a vászon középen legyen */
+      justify-content: flex-start; /* Felülre igazítás függőlegesen */
+      align-items: center; /* Középre igazítás vízszintesen */
+      padding: 40px;
     }
 
     .container {
-      flex-direction: column; /* Vászon és alatta lévő elemek maradnak oszlopban */
-      margin-right: 30px; /* Távolság a gomboktól */
-    }
-
-    #pointCount,
-    button {
-      margin-top: 10px; /* Kisebb margó számítógépen */
-      font-size: 1em; /* Normál betűméret számítógépen */
-      text-align: left; /* Szöveg balra igazítása számítógépen */
+      margin-right: 0; /* Nincs jobb margó számítógépen */
     }
   }
 </style>
@@ -87,11 +79,11 @@
 <body>
 
 <div class="container">
+  <h2>Labdás edzés</h2>
   <canvas id="myCanvas"></canvas>
 </div>
-<div class="container2">
-    <div id="pointCount">⚽ - <span id="count">0</span></div>
-<button id="downloadButton">Kép letöltése</button>
+<div class="button-container">
+  <button id="downloadButton">Kép letöltése</button>
 </div>
 
 <script>
@@ -100,10 +92,10 @@
   let points = [];
   let draggingPoint = null;
   const initialPointCount = 11;
-  const emojiRadius = 7; // Kicsit nagyobb sugár az emojihoz
+  const emojiRadius = 10; // Kicsit nagyobb sugár az emojihoz
 
   function resizeCanvas() {
-    const containerWidth = Math.min(window.innerWidth * 0.95, 800); // Nagyobb maximális szélesség
+    const containerWidth = Math.min(window.innerWidth * 0.95, 700); // Nagyobb maximális szélesség
     const aspectRatio = 400 / 400;
     canvas.width = containerWidth;
     canvas.height = containerWidth / aspectRatio;
@@ -180,7 +172,9 @@
 
   // Függvény a vászon újrarajzolásához
   function redrawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Töltsük ki a vászont fehérrel
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const targetPoints = new Set();
 
@@ -211,15 +205,22 @@
     ctx.textBaseline = 'middle';
     for (const point of points) {
       if (targetPoints.has(point)) {
-        ctx.font = `12px sans-serif`;
+        ctx.font = `16px sans-serif`;
         ctx.fillText('⚽', point.x, point.y);
       } else {
         drawPoint(point.x, point.y, '#28a745');
       }
     }
 
-    // Frissítsük a piros pontok számát
-    document.getElementById('count').textContent = targetPoints.size;
+    // Rajzoljuk ki a labdák számát a kép alján kerettel
+    const targetCount = targetPoints.size;
+    const text = `⚽ - ${targetCount}`;
+    ctx.font = '1.5em sans-serif';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    ctx.fillText(text, canvas.width / 2, canvas.height - 10);
   }
 
   // Függvény annak ellenőrzésére, hogy egy ponton belül kattintottak-e
