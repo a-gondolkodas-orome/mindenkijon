@@ -134,23 +134,6 @@
   const margin = 20;
   const touchRadius = 30; // Még nagyobb érintési terület mobilon
   
-  // Segítő funkció a visszajelzéshez
-  function showFeedback(message, duration = 1500) {
-    feedback.textContent = message;
-    feedback.classList.add('visible');
-    setTimeout(() => {
-      feedback.classList.remove('visible');
-    }, duration);
-  }
-
-  // Debug információ megjelenítése (fejlesztés közben)
-  function showDebug(message) {
-    if (debug.style.display !== 'block') {
-      debug.style.display = 'block';
-    }
-    debug.textContent = message;
-  }
-
   function resizeCanvas() {
     const containerWidth = Math.min(window.innerWidth * 0.95, 700);
     const aspectRatio = 400 / 400;
@@ -241,7 +224,6 @@
     // Rajzoljuk meg a biztonsági margót halvány szürke színnel
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 1;
-    ctx.strokeRect(margin, margin, canvas.width - margin * 2, canvas.height - margin * 2);
 
     const targetPoints = new Set();
 
@@ -297,7 +279,6 @@
     return point;
   }
 
-  // *** KULCSFONTOSSÁGÚ MÓDOSÍTÁS: PONTOS KOORDINÁTA SZÁMÍTÁS ÉRINTÉSNÉL ***
   function getCanvasCoordinates(event, type = 'mouse') {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;    // Arány a canvas és a megjelenített méret között
@@ -380,7 +361,6 @@
     if (touchedPoint) {
       draggingPoint = touchedPoint;
       isDragging = true;
-      showFeedback("Pont kijelölve");
       redrawCanvas();
     }
   });
@@ -401,11 +381,7 @@
 
   canvas.addEventListener('touchend', function(event) {
     event.preventDefault();
-    
-    if (isDragging && draggingPoint) {
-      showFeedback("Pont elhelyezve");
-    }
-    
+        
     isDragging = false;
     draggingPoint = null;
     redrawCanvas();
@@ -436,41 +412,19 @@
       keepPointInBounds(point);
       points.push(point);
     }
-    redrawCanvas();
-    
-    // Kezdeti segítség mutatása
-    if ('ontouchstart' in window) {
-      showFeedback("Koppints egy pontra a kijelöléshez, majd húzd új pozícióba", 3000);
-    }
+    redrawCanvas();    
   }
 
   // Kép letöltése
   document.getElementById('downloadButton').addEventListener('click', function() {
-    // Mentéshez ideiglenes másolatot készítünk a vászonról
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Fehér háttér
-    tempCtx.fillStyle = 'white';
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    
-    // Másoljuk át a pontokat, nyilakat stb., de a margó nélkül
-    const originalCtx = ctx;
-    ctx = tempCtx;
-    
-    // Mentük a margó jelölést ideiglenesen
-    const originalStrokeStyle = ctx.strokeStyle;
-    ctx.strokeStyle = 'transparent';
-    
+    const originalFillStyle = ctx.fillStyle;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     redrawCanvas();
-    
-    // Visszaállítjuk az eredeti kontextust
-    ctx = originalCtx;
-    
-    // Letöltés
-    const dataURL = tempCanvas.toDataURL('image/png');
+
+    const dataURL = canvas.toDataURL('image/png');
+    ctx.fillStyle = originalFillStyle;
+    redrawCanvas();
     
     const now = new Date();
     const year = now.getFullYear();
@@ -479,7 +433,7 @@
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    const filename = `edzes_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.png`;
+    const filename = `labdas-edzes_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.png`;
 
     const a = document.createElement('a');
     a.href = dataURL;
@@ -492,7 +446,6 @@
     ctx.strokeStyle = originalStrokeStyle;
     redrawCanvas();
     
-    showFeedback("Kép letöltve");
   });
 
   // Inicializáljuk a pontokat és állítsuk be a reszponzivitást
