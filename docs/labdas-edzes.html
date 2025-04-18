@@ -93,6 +93,7 @@
   let draggingPoint = null;
   const initialPointCount = 11;
   const emojiRadius = 10; // Kicsit nagyobb sugár az emojihoz
+  const margin = 20; // A biztonságos margó szélessége pixelben
 
   function resizeCanvas() {
     const containerWidth = Math.min(window.innerWidth * 0.95, 700); // Nagyobb maximális szélesség
@@ -175,6 +176,11 @@
     // Töltsük ki a vászont fehérrel
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Rajzoljuk meg a biztonsági margót halvány szürke színnel
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin, margin, canvas.width - margin * 2, canvas.height - margin * 2);
 
     const targetPoints = new Set();
 
@@ -223,23 +229,31 @@
     ctx.fillText(text, canvas.width / 2, canvas.height - 10);
   }
 
+  // Függvény a pont korlátozására a margókon belül
+  function keepPointInBounds(point) {
+    point.x = Math.max(margin, Math.min(canvas.width - margin, point.x));
+    point.y = Math.max(margin, Math.min(canvas.height - margin, point.y));
+    return point;
+  }
+
   // Függvény annak ellenőrzésére, hogy egy ponton belül kattintottak-e
   function isPointClicked(point, x, y) {
     const dist = distance(point, { x: x, y: y });
-    return dist < 8; // Kicsit nagyobb érzékelési terület a nagyobb emojihoz
+    return dist < 15; // Nagyobb érzékelési terület a mobilon könnyebb használatért
   }
 
-  // Eseménykezelők egérhez
+  // Eseménykezelők egérhez (számítógépen)
   canvas.addEventListener('mousedown', function(event) {
+    event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
 
+    // Keresünk egy pontot, amit kiválasztottunk
+    draggingPoint = null;
     for (let i = points.length - 1; i >= 0; i--) {
-      const point = points[i];
-      const dist = Math.sqrt(Math.pow(point.x - mouseX, 2) + Math.pow(point.y - mouseY, 2));
-      if (dist < 10) { // Kicsit nagyobb kattintási rádiusz
-        draggingPoint = point;
+      if (isPointClicked(points[i], mouseX, mouseY)) {
+        draggingPoint = points[i];
         canvas.style.cursor = 'grabbing';
         break;
       }
@@ -251,6 +265,8 @@
       const rect = canvas.getBoundingClientRect();
       draggingPoint.x = event.clientX - rect.left;
       draggingPoint.y = event.clientY - rect.top;
+      // Korlátozzuk a pont pozícióját a margókon belül
+      keepPointInBounds(draggingPoint);
       redrawCanvas();
     }
   });
@@ -265,7 +281,7 @@
     canvas.style.cursor = 'grab';
   });
 
-  // Eseménykezelők érintéshez
+  // Eseménykezelők érintéshez (mobilon)
   canvas.addEventListener('touchstart', function(event) {
     event.preventDefault(); // Megakadályozza az egér események kiváltását
     const rect = canvas.getBoundingClientRect();
@@ -273,12 +289,11 @@
     const touchX = touch.clientX - rect.left;
     const touchY = touch.clientY - rect.top;
 
+    // Keresünk egy pontot, amit kiválasztottunk
+    draggingPoint = null;
     for (let i = points.length - 1; i >= 0; i--) {
-      const point = points[i];
-      const dist = Math.sqrt(Math.pow(point.x - touchX, 2) + Math.pow(point.y - touchY, 2));
-      if (dist < 15) { // Kicsit nagyobb érintési rádiusz
-        draggingPoint = point;
-        canvas.style.cursor = 'grabbing';
+      if (isPointClicked(points[i], touchX, touchY)) {
+        draggingPoint = points[i];
         break;
       }
     }
@@ -289,20 +304,24 @@
     if (draggingPoint) {
       const rect = canvas.getBoundingClientRect();
       const touch = event.touches[0];
+      
+      // Frissítjük a pont pozícióját
       draggingPoint.x = touch.clientX - rect.left;
       draggingPoint.y = touch.clientY - rect.top;
+      
+      // Korlátozzuk a pont pozícióját a margókon belül
+      keepPointInBounds(draggingPoint);
+      
       redrawCanvas();
     }
   });
 
-  canvas.addEventListener('touchend', function() {
+  canvas.addEventListener('touchend', function(event) {
     draggingPoint = null;
-    canvas.style.cursor = 'grab';
   });
 
-  canvas.addEventListener('touchcancel', function() {
+  canvas.addEventListener('touchcancel', function(event) {
     draggingPoint = null;
-    canvas.style.cursor = 'grab';
   });
 
   // Kezdeti pontok létrehozása
@@ -312,11 +331,16 @@
     const radius = Math.min(canvas.width, canvas.height) * 0.35; // Nagyobb sugár a pontok távolabb helyezéséhez
     const randomness = 30;
 
+    points = []; // Biztosítsuk, hogy tiszta lappal kezdünk
+    
     for (let i = 0; i < initialPointCount; i++) {
       const angle = (i / initialPointCount) * 2 * Math.PI;
       const x = centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * randomness;
       const y = centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * randomness;
-      points.push({ x: x, y: y });
+      // Biztosítsuk, hogy a pontok a margón belül legyenek
+      const point = { x, y };
+      keepPointInBounds(point);
+      points.push(point);
     }
     redrawCanvas();
   }
@@ -326,11 +350,17 @@
     const originalFillStyle = ctx.fillStyle;
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Töröljük a margó megjelenítését a letöltött képen
+    const originalStrokeStyle = ctx.strokeStyle;
+    ctx.strokeStyle = '#fff';
     redrawCanvas();
 
     const dataURL = canvas.toDataURL('image/png');
 
+    // Visszaállítjuk az eredeti megjelenítést
     ctx.fillStyle = originalFillStyle;
+    ctx.strokeStyle = originalStrokeStyle;
     redrawCanvas();
 
     const now = new Date();
