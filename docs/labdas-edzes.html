@@ -1,362 +1,373 @@
 <!DOCTYPE html>
 <html>
-<head>
-<title>Labdás edzés</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #fff; /* Fehér háttér */
-    padding: 30px; /* Nagyobb padding a széleken */
-    box-sizing: border-box;
-  }
-
-  .container {
-    display: flex;
-    flex-direction: column; /* Mobilon egymás alatt */
-    align-items: center;
-    width: 100%;
-    max-width: 800px;
-    margin-bottom: 15px; /* Kisebb távolság a gombhoz */
-  }
-
-  canvas {
-    display: block;
-    border: 1px solid #ccc;
-    cursor: grab;
-    margin-top: 20px;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.15); /* Erősebb árnyék */
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px; /* Lekerekített sarkok */
-    touch-action: none;
-    background-color: #fff; /* Explicit fehér háttér a canvas-nak */
-  }
-
-  .button-container {
-    display: flex;
-    justify-content: center; /* Gomb középre igazítása */
-    width: 100%;
-    max-width: 800px;
-  }
-
-  button {
-    margin-top: 15px;
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px; /* Lekerekített sarkok */
-    transition: background-color 0.3s ease; /* Animáció a hover hatáshoz */
-  }
-
-  button:hover {
-    background-color: #0056b3;
-  }
-
-  /* Számítógépre (szélesebb, mint 768px) */
-  @media (min-width: 769px) {
-    body {
-      flex-direction: column; /* Vissza oszlopba, hogy a vászon középen legyen */
-      justify-content: flex-start; /* Felülre igazítás függőlegesen */
-      align-items: center; /* Középre igazítás vízszintesen */
-      padding: 40px;
-    }
-
-    .container {
-      margin-right: 0; /* Nincs jobb margó számítógépen */
-    }
-  }
-</style>
-</head>
-<body>
-
-<div class="container">
-  <h2>Labdás edzés</h2>
-  <canvas id="myCanvas"></canvas>
-</div>
-<div class="button-container">
-  <button id="downloadButton">Kép letöltése</button>
-</div>
-
-<script>
-  const canvas = document.getElementById('myCanvas');
-  const ctx = canvas.getContext('2d');
-  let points = [];
-  let draggingPoint = null;
-  const initialPointCount = 11;
-  const emojiRadius = 10; // Kicsit nagyobb sugár az emojihoz
-
-  function resizeCanvas() {
-    const containerWidth = Math.min(window.innerWidth * 0.95, 700); // Nagyobb maximális szélesség
-    const aspectRatio = 400 / 400;
-    canvas.width = containerWidth;
-    canvas.height = containerWidth / aspectRatio;
-    redrawCanvas();
-  }
-
-  // Függvény a pont rajzolásához
-  function drawPoint(x, y, color = 'blue') {
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI); // Kicsit nagyobb nem piros pontok
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.closePath();
-  }
-
-  // Függvény a nyíl rajzolásához
-  function drawArrow(x1, y1, x2, y2) {
-    const headlen = emojiRadius; // Kicsit nagyobb nyílhegy
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)); // Javítva: y1 helyett y2
-    const newX2 = x2 - emojiRadius * Math.cos(angle);
-    const newY2 = y2 - emojiRadius * Math.sin(angle);
-
-    const adjustedX2 = newX2 - emojiRadius * Math.cos(angle);
-    const adjustedY2 = newY2 - emojiRadius * Math.sin(angle);
-
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-
-    ctx.lineTo(newX2, newY2);
-    ctx.moveTo(newX2, newY2);
-    ctx.lineTo(newX2 - headlen * Math.cos(angle - Math.PI / 6), newY2 - headlen * Math.sin(angle - Math.PI / 6));
-
-    ctx.moveTo(newX2, newY2);
-    ctx.lineTo(newX2 - headlen * Math.cos(angle + Math.PI / 6), newY2 - headlen * Math.sin(angle + Math.PI / 6));
-    ctx.strokeStyle = '#007bff';
-    ctx.lineWidth = 2; // Kicsit vastagabb nyilak
-    ctx.stroke();
-    ctx.closePath();
-  }
-
-  // Függvény a távolság kiszámításához két pont között
-  function distance(p1, p2) {
-    return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-  }
-
-  // Függvény a legközelebbi szomszéd megtalálásához
-  function findNearestNeighbor(point, pointArray) {
-    let nearestNeighbor = null;
-    let minDistance = Infinity;
-
-    for (const otherPoint of pointArray) {
-      if (point !== otherPoint) {
-        const dist = distance(point, otherPoint);
-        const roundedDist = parseFloat(dist.toFixed(2));
-        const currentMinRoundedDist = parseFloat(minDistance.toFixed(2));
-
-        if (roundedDist < currentMinRoundedDist) {
-          minDistance = dist;
-          nearestNeighbor = otherPoint;
-        } else if (roundedDist === currentMinRoundedDist) {
-          otherPoint.x += (Math.random() - 0.5) * 1; // Kisebb elmozdulás mobilon
-          otherPoint.y += (Math.random() - 0.5) * 1;
-          const newDist = distance(point, otherPoint);
-          if (newDist < minDistance) {
-            minDistance = newDist;
-            nearestNeighbor = otherPoint;
-          }
-        }
-      }
-    }
-    return nearestNeighbor;
-  }
-
-  // Függvény a vászon újrarajzolásához
-  function redrawCanvas() {
-    // Töltsük ki a vászont fehérrel
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const targetPoints = new Set();
-
-    // Kössük össze a pontokat a legközelebbi szomszédjukkal és gyűjtsük a célpontokat
-    if (points.length > 1) {
-      for (const point of points) {
-        const nearest = findNearestNeighbor(point, points);
-        if (nearest) {
-          drawArrow(point.x, point.y, nearest.x, nearest.y);
-          targetPoints.add(nearest);
-
-          // Írjuk ki a távolságot
-          const dist = distance(point, nearest).toFixed(2);
-          const midX = (point.x + nearest.x) / 2;
-          const midY = (point.y + nearest.y) / 2;
-
-          ctx.font = '10px sans-serif'; // Kicsit nagyobb távolság felirat
-          ctx.fillStyle = '#555';
-          ctx.textAlign = 'center';
-          ctx.fillText(dist, midX, midY - 5);
-        }
-      }
-    }
-
-    // Rajzoljuk ki az összes pontot a megfelelő színnel/emojival
-    ctx.font = '1.2em sans-serif'; // Kicsit nagyobb emoji
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (const point of points) {
-      if (targetPoints.has(point)) {
-        ctx.font = `16px sans-serif`;
-        ctx.fillText('⚽', point.x, point.y);
-      } else {
-        drawPoint(point.x, point.y, '#28a745');
-      }
-    }
-
-    // Rajzoljuk ki a labdák számát a kép alján kerettel
-    const targetCount = targetPoints.size;
-    const text = `⚽ - ${targetCount}`;
-    ctx.font = '1.5em sans-serif';
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-
-    ctx.fillText(text, canvas.width / 2, canvas.height - 10);
-  }
-
-  // Függvény annak ellenőrzésére, hogy egy ponton belül kattintottak-e
-  function isPointClicked(point, x, y) {
-    const dist = distance(point, { x: x, y: y });
-    return dist < 8; // Kicsit nagyobb érzékelési terület a nagyobb emojihoz
-  }
-
-  // Eseménykezelők egérhez
-  canvas.addEventListener('mousedown', function(event) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    for (let i = points.length - 1; i >= 0; i--) {
-      const point = points[i];
-      const dist = Math.sqrt(Math.pow(point.x - mouseX, 2) + Math.pow(point.y - mouseY, 2));
-      if (dist < 10) { // Kicsit nagyobb kattintási rádiusz
-        draggingPoint = point;
-        canvas.style.cursor = 'grabbing';
-        break;
-      }
-    }
-  });
-
-  canvas.addEventListener('mousemove', function(event) {
-    if (draggingPoint) {
-      const rect = canvas.getBoundingClientRect();
-      draggingPoint.x = event.clientX - rect.left;
-      draggingPoint.y = event.clientY - rect.top;
-      redrawCanvas();
-    }
-  });
-
-  canvas.addEventListener('mouseup', function() {
-    draggingPoint = null;
-    canvas.style.cursor = 'grab';
-  });
-
-  canvas.addEventListener('mouseout', function() {
-    draggingPoint = null;
-    canvas.style.cursor = 'grab';
-  });
-
-  // Eseménykezelők érintéshez
-  canvas.addEventListener('touchstart', function(event) {
-    event.preventDefault(); // Megakadályozza az egér események kiváltását
-    const rect = canvas.getBoundingClientRect();
-    const touch = event.touches[0];
-    const touchX = touch.clientX - rect.left;
-    const touchY = touch.clientY - rect.top;
-
-    for (let i = points.length - 1; i >= 0; i--) {
-      const point = points[i];
-      const dist = Math.sqrt(Math.pow(point.x - touchX, 2) + Math.pow(point.y - touchY, 2));
-      if (dist < 15) { // Kicsit nagyobb érintési rádiusz
-        draggingPoint = point;
-        canvas.style.cursor = 'grabbing';
-        break;
-      }
-    }
-  });
-
-  canvas.addEventListener('touchmove', function(event) {
-    event.preventDefault();
-    if (draggingPoint) {
-      const rect = canvas.getBoundingClientRect();
-      const touch = event.touches[0];
-      draggingPoint.x = touch.clientX - rect.left;
-      draggingPoint.y = touch.clientY - rect.top;
-      redrawCanvas();
-    }
-  });
-
-  canvas.addEventListener('touchend', function() {
-    draggingPoint = null;
-    canvas.style.cursor = 'grab';
-  });
-
-  canvas.addEventListener('touchcancel', function() {
-    draggingPoint = null;
-    canvas.style.cursor = 'grab';
-  });
-
-  // Kezdeti pontok létrehozása
-  function initializePoints() {
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) * 0.35; // Nagyobb sugár a pontok távolabb helyezéséhez
-    const randomness = 30;
-
-    for (let i = 0; i < initialPointCount; i++) {
-      const angle = (i / initialPointCount) * 2 * Math.PI;
-      const x = centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * randomness;
-      const y = centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * randomness;
-      points.push({ x: x, y: y });
-    }
-    redrawCanvas();
-  }
-
-  // Kép letöltése
-  document.getElementById('downloadButton').addEventListener('click', function() {
-    const originalFillStyle = ctx.fillStyle;
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    redrawCanvas();
-
-    const dataURL = canvas.toDataURL('image/png');
-
-    ctx.fillStyle = originalFillStyle;
-    redrawCanvas();
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const filename = `edzes_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.png`;
-
-    const a = document.createElement('a');
-    a.href = dataURL;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  });
-
-  // Inicializáljuk a pontokat és állítsuk be a reszponzivitást
-  window.addEventListener('load', () => {
-    resizeCanvas();
-    initializePoints();
-  });
-  window.addEventListener('resize', resizeCanvas);
-</script>
-
-</body>
+   <head>
+      <title>Labdás edzés</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+           body {
+             margin: 0;
+             font-family: sans-serif;
+             display: flex;
+             flex-direction: column;
+             align-items: center;
+             min-height: 100vh;
+             background-color: #fff; /* Fehér háttér */
+             padding: 30px; /* Nagyobb padding a széleken */
+             box-sizing: border-box;
+           }
+           .container {
+             display: flex;
+             flex-direction: column; /* Mobilon egymás alatt */
+             align-items: center;
+             width: 100%;
+             max-width: 800px;
+             margin-bottom: 15px; /* Kisebb távolság a gombhoz */
+           }
+           canvas {
+             display: block;
+             border: 1px solid #ccc;
+             cursor: grab;
+             margin-top: 20px;
+             box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.15); /* Erősebb árnyék */
+             max-width: 100%;
+             height: auto;
+             border-radius: 8px; /* Lekerekített sarkok */
+             touch-action: none;
+             background-color: #fff; /* Explicit fehér háttér a canvas-nak */
+           }
+           .button-container {
+             display: flex;
+             justify-content: center; /* Gomb középre igazítása */
+             width: 100%;
+             max-width: 800px;
+           }
+           button {
+             margin-top: 15px;
+             padding: 10px 20px;
+             font-size: 1em;
+             cursor: pointer;
+             background-color: #007bff;
+             color: white;
+             border: none;
+             border-radius: 8px; /* Lekerekített sarkok */
+             transition: background-color 0.3s ease; /* Animáció a hover hatáshoz */
+           }
+           button:hover {
+             background-color: #0056b3;
+           }
+           /* Számítógépre (szélesebb, mint 768px) */
+           @media (min-width: 769px) {
+             body {
+               flex-direction: column; /* Vissza oszlopba, hogy a vászon középen legyen */
+               justify-content: flex-start; /* Felülre igazítás függőlegesen */
+               align-items: center; /* Középre igazítás vízszintesen */
+               padding: 40px;
+             }
+             .container {
+               margin-right: 0; /* Nincs jobb margó számítógépen */
+             }
+           }
+      </style>
+   </head>
+   <body>
+      <div class="container">
+           
+         <h2>Labdás edzés</h2>
+           
+         <canvas id="myCanvas"></canvas>
+      </div>
+      <div class="button-container">
+           <button id="downloadButton">Kép letöltése</button>
+      </div>
+      <script>
+           const canvas = document.getElementById('myCanvas');
+           const ctx = canvas.getContext('2d');
+           let points = [];
+           let draggingPoint = null;
+           const initialPointCount = 11;
+           const emojiRadius = 10;
+           const margin = 30; // Margó szélessége
+         
+           function resizeCanvas() {
+             const containerWidth = Math.min(window.innerWidth * 0.95, 700);
+             const aspectRatio = 400 / 400;
+             canvas.width = containerWidth;
+             canvas.height = containerWidth / aspectRatio;
+             redrawCanvas();
+           }
+         
+           // Függvény a pont rajzolásához
+           function drawPoint(x, y, color = 'blue') {
+             ctx.beginPath();
+             ctx.arc(x, y, 5, 0, 2 * Math.PI);
+             ctx.fillStyle = color;
+             ctx.fill();
+             ctx.closePath();
+           }
+         
+           // Függvény a nyíl rajzolásához
+           function drawArrow(x1, y1, x2, y2) {
+             const headlen = emojiRadius;
+             const angle = Math.atan2(y2 - y1, x2 - x1);
+             const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+             const newX2 = x2 - emojiRadius * Math.cos(angle);
+             const newY2 = y2 - emojiRadius * Math.sin(angle);
+         
+             ctx.beginPath();
+             ctx.moveTo(x1, y1);
+         
+             ctx.lineTo(newX2, newY2);
+             ctx.moveTo(newX2, newY2);
+             ctx.lineTo(newX2 - headlen * Math.cos(angle - Math.PI / 6), newY2 - headlen * Math.sin(angle - Math.PI / 6));
+         
+             ctx.moveTo(newX2, newY2);
+             ctx.lineTo(newX2 - headlen * Math.cos(angle + Math.PI / 6), newY2 - headlen * Math.sin(angle + Math.PI / 6));
+             ctx.strokeStyle = '#007bff';
+             ctx.lineWidth = 2;
+             ctx.stroke();
+             ctx.closePath();
+           }
+         
+           // Függvény a távolság kiszámításához két pont között
+           function distance(p1, p2) {
+             return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+           }
+         
+           // Függvény a legközelebbi szomszéd megtalálásához
+           function findNearestNeighbor(point, pointArray) {
+             let nearestNeighbor = null;
+             let minDistance = Infinity;
+         
+             for (const otherPoint of pointArray) {
+               if (point !== otherPoint) {
+                 const dist = distance(point, otherPoint);
+                 const roundedDist = parseFloat(dist.toFixed(2));
+                 const currentMinRoundedDist = parseFloat(minDistance.toFixed(2));
+         
+                 if (roundedDist < currentMinRoundedDist) {
+                   minDistance = dist;
+                   nearestNeighbor = otherPoint;
+                 } else if (roundedDist === currentMinRoundedDist) {
+                   otherPoint.x += (Math.random() - 0.5) * 1;
+                   otherPoint.y += (Math.random() - 0.5) * 1;
+                   const newDist = distance(point, otherPoint);
+                   if (newDist < minDistance) {
+                     minDistance = newDist;
+                     nearestNeighbor = otherPoint;
+                   }
+                 }
+               }
+             }
+             return nearestNeighbor;
+           }
+         
+           // Függvény a vászon újrarajzolásához
+           function redrawCanvas() {
+             ctx.fillStyle = '#fff';
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+         
+             const targetPoints = new Set();
+         
+             if (points.length > 1) {
+               for (const point of points) {
+                 const nearest = findNearestNeighbor(point, points);
+                 if (nearest) {
+                   drawArrow(point.x, point.y, nearest.x, nearest.y);
+                   targetPoints.add(nearest);
+         
+                   const dist = distance(point, nearest).toFixed(2);
+                   const midX = (point.x + nearest.x) / 2;
+                   const midY = (point.y + nearest.y) / 2;
+         
+                   ctx.font = '10px sans-serif';
+                   ctx.fillStyle = '#555';
+                   ctx.textAlign = 'center';
+                   ctx.fillText(dist, midX, midY - 5);
+                 }
+               }
+             }
+         
+             ctx.font = '1.2em sans-serif';
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             for (const point of points) {
+               if (targetPoints.has(point)) {
+                 ctx.font = `16px sans-serif`;
+                 ctx.fillText('⚽', point.x, point.y);
+               } else {
+                 drawPoint(point.x, point.y, '#28a745');
+               }
+             }
+         
+             const targetCount = targetPoints.size;
+             const text = `⚽ - ${targetCount}`;
+             ctx.font = '1.5em sans-serif';
+             ctx.fillStyle = 'black';
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'bottom';
+         
+             ctx.fillText(text, canvas.width / 2, canvas.height - 10);
+           }
+         
+           // Függvény annak ellenőrzésére, hogy egy ponton belül kattintottak-e
+           function isPointClicked(point, x, y) {
+             const dist = distance(point, { x: x, y: y });
+             return dist < 8;
+           }
+         
+           // Eseménykezelők egérhez
+           canvas.addEventListener('mousedown', function(event) {
+             const rect = canvas.getBoundingClientRect();
+             const mouseX = event.clientX - rect.left;
+             const mouseY = event.clientY - rect.top;
+         
+             for (let i = points.length - 1; i >= 0; i--) {
+               const point = points[i];
+               const dist = Math.sqrt(Math.pow(point.x - mouseX, 2) + Math.pow(point.y - mouseY, 2));
+               if (dist < 10) {
+                 draggingPoint = point;
+                 canvas.style.cursor = 'grabbing';
+                 break;
+               }
+             }
+           });
+         
+           canvas.addEventListener('mousemove', function(event) {
+             if (draggingPoint) {
+               const rect = canvas.getBoundingClientRect();
+               let mouseX = event.clientX - rect.left;
+               let mouseY = event.clientY - rect.top;
+         
+               mouseX = Math.max(margin, Math.min(mouseX, canvas.width - margin));
+               mouseY = Math.max(margin, Math.min(mouseY, canvas.height - margin));
+         
+               draggingPoint.x = mouseX;
+               draggingPoint.y = mouseY;
+               redrawCanvas();
+             }
+           });
+         
+           canvas.addEventListener('mouseup', function() {
+             draggingPoint = null;
+             canvas.style.cursor = 'grab';
+             redrawCanvas(); // Redraw after dropping in case of margin constraint
+           });
+         
+           canvas.addEventListener('mouseout', function() {
+             if (draggingPoint) { // Stop dragging if mouse leaves canvas while dragging
+               draggingPoint = null;
+               canvas.style.cursor = 'grab';
+               redrawCanvas(); // Redraw after stopping drag
+             }
+           });
+         
+           // Eseménykezelők érintéshez
+           canvas.addEventListener('touchstart', function(event) {
+             event.preventDefault();
+             const rect = canvas.getBoundingClientRect();
+             const touch = event.touches[0];
+             let touchX = touch.clientX - rect.left;
+             let touchY = touch.clientY - rect.top;
+         
+             for (let i = points.length - 1; i >= 0; i--) {
+               const point = points[i];
+               const dist = Math.sqrt(Math.pow(point.x - touchX, 2) + Math.pow(point.y - touchY, 2));
+               if (dist < 15) {
+                 draggingPoint = point;
+                 canvas.style.cursor = 'grabbing';
+                 break;
+               }
+             }
+           });
+         
+           canvas.addEventListener('touchmove', function(event) {
+             event.preventDefault();
+             if (draggingPoint) {
+               const rect = canvas.getBoundingClientRect();
+               const touch = event.touches[0];
+               let touchX = touch.clientX - rect.left;
+               let touchY = touch.clientY - rect.top;
+         
+               touchX = Math.max(margin, Math.min(touchX, canvas.width - margin));
+               touchY = Math.max(margin, Math.min(touchY, canvas.height - margin));
+         
+               draggingPoint.x = touchX;
+               draggingPoint.y = touchY;
+               redrawCanvas();
+             }
+           });
+         
+           canvas.addEventListener('touchend', function() {
+             draggingPoint = null;
+             canvas.style.cursor = 'grab';
+             redrawCanvas(); // Redraw after dropping in case of margin constraint
+           });
+         
+           canvas.addEventListener('touchcancel', function() {
+             if (draggingPoint) { // Stop dragging if touch is cancelled
+               draggingPoint = null;
+               canvas.style.cursor = 'grab';
+               redrawCanvas(); // Redraw after stopping drag
+             }
+           });
+         
+           // Kezdeti pontok létrehozása
+           function initializePoints() {
+             const centerX = canvas.width / 2;
+             const centerY = canvas.height / 2;
+             const radius = Math.min(canvas.width, canvas.height) * 0.35;
+             const randomness = 30;
+         
+             for (let i = 0; i < initialPointCount; i++) {
+               const angle = (i / initialPointCount) * 2 * Math.PI;
+               let x = centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * randomness;
+               let y = centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * randomness;
+         
+               // Inicializáláskor is a margón belülre helyezzük
+               x = Math.max(margin, Math.min(x, canvas.width - margin));
+               y = Math.max(margin, Math.min(y, canvas.height - margin));
+         
+               points.push({ x: x, y: y });
+             }
+             redrawCanvas();
+           }
+         
+           // Kép letöltése
+           document.getElementById('downloadButton').addEventListener('click', function() {
+             const originalFillStyle = ctx.fillStyle;
+             ctx.fillStyle = 'white';
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+             redrawCanvas();
+         
+             const dataURL = canvas.toDataURL('image/png');
+         
+             ctx.fillStyle = originalFillStyle;
+             redrawCanvas();
+         
+             const now = new Date();
+             const year = now.getFullYear();
+             const month = String(now.getMonth() + 1).padStart(2, '0');
+             const day = String(now.getDate()).padStart(2, '0');
+             const hours = String(now.getHours()).padStart(2, '0');
+             const minutes = String(now.getMinutes()).padStart(2, '0');
+             const seconds = String(now.getSeconds()).padStart(2, '0');
+             const filename = `edzes_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.png`;
+         
+             const a = document.createElement('a');
+             a.href = dataURL;
+             a.download = filename;
+             document.body.appendChild(a);
+             a.click();
+             document.body.removeChild(a);
+           });
+         
+           // Inicializáljuk a pontokat és állítsuk be a reszponzivitást
+           window.addEventListener('load', () => {
+             resizeCanvas();
+             initializePoints();
+           });
+           window.addEventListener('resize', resizeCanvas);
+      </script>
+   </body>
 </html>
