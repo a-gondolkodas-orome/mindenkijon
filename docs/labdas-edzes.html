@@ -61,7 +61,7 @@
     background-color: #0056b3;
   }
 
-  /* Mobil irányelveknél a visszajelzésre */
+  /* Visszajelzés stílusa */
   #feedback {
     position: fixed;
     bottom: 10px;
@@ -79,6 +79,19 @@
 
   .visible {
     opacity: 1 !important;
+  }
+
+  /* Mobilhoz kapcsolódó jelzések */
+  #debug {
+    position: fixed;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    display: none;
   }
 
   @media (min-width: 769px) {
@@ -105,20 +118,21 @@
   <button id="downloadButton">Kép letöltése</button>
 </div>
 <div id="feedback"></div>
+<div id="debug"></div>
 
 <script>
   const canvas = document.getElementById('myCanvas');
   const ctx = canvas.getContext('2d');
   const feedback = document.getElementById('feedback');
+  const debug = document.getElementById('debug');
   
   let points = [];
   let draggingPoint = null;
   let isDragging = false;
-  let isSelecting = true; // Kijelölési mód alapértelmezetten aktív
   const initialPointCount = 11;
   const emojiRadius = 10;
   const margin = 20;
-  const touchRadius = 25; // Nagyobb érintési terület mobilon
+  const touchRadius = 30; // Még nagyobb érintési terület mobilon
   
   // Segítő funkció a visszajelzéshez
   function showFeedback(message, duration = 1500) {
@@ -129,9 +143,18 @@
     }, duration);
   }
 
+  // Debug információ megjelenítése (fejlesztés közben)
+  function showDebug(message) {
+    if (debug.style.display !== 'block') {
+      debug.style.display = 'block';
+    }
+    debug.textContent = message;
+  }
+
   function resizeCanvas() {
     const containerWidth = Math.min(window.innerWidth * 0.95, 700);
     const aspectRatio = 400 / 400;
+    // Az eredeti canvas méretét tároljuk pixel méretben
     canvas.width = containerWidth;
     canvas.height = containerWidth / aspectRatio;
     redrawCanvas();
@@ -143,13 +166,13 @@
     
     // Ha ki van jelölve a pont, rajzoljunk köré egy karikát
     if (isSelected) {
-      ctx.arc(x, y, 12, 0, 2 * Math.PI);
+      ctx.arc(x, y, 15, 0, 2 * Math.PI);
       ctx.strokeStyle = '#ff9900';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
     
-    ctx.arc(x, y, 6, 0, 2 * Math.PI);
+    ctx.arc(x, y, 8, 0, 2 * Math.PI); // Nagyobb pontok a jobb láthatóságért
     ctx.fillStyle = color;
     ctx.fill();
     ctx.closePath();
@@ -274,6 +297,29 @@
     return point;
   }
 
+  // *** KULCSFONTOSSÁGÚ MÓDOSÍTÁS: PONTOS KOORDINÁTA SZÁMÍTÁS ÉRINTÉSNÉL ***
+  function getCanvasCoordinates(event, type = 'mouse') {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;    // Arány a canvas és a megjelenített méret között
+    const scaleY = canvas.height / rect.height;
+    
+    let clientX, clientY;
+    
+    if (type === 'touch' && event.touches && event.touches[0]) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
+    
+    // A tényleges canvas koordináták kiszámítása a skálázások figyelembevételével
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    return { x, y };
+  }
+
   // Függvény annak ellenőrzésére, hogy egy ponton belül kattintottak-e
   function findTouchedPoint(x, y, radius = 15) {
     for (let i = points.length - 1; i >= 0; i--) {
@@ -289,11 +335,9 @@
   // Egér események kezelése (számítógépen)
   canvas.addEventListener('mousedown', function(event) {
     event.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    const selectedPoint = findTouchedPoint(mouseX, mouseY);
+    const coords = getCanvasCoordinates(event);
+    
+    const selectedPoint = findTouchedPoint(coords.x, coords.y);
     if (selectedPoint) {
       draggingPoint = selectedPoint;
       isDragging = true;
@@ -304,9 +348,9 @@
 
   canvas.addEventListener('mousemove', function(event) {
     if (isDragging && draggingPoint) {
-      const rect = canvas.getBoundingClientRect();
-      draggingPoint.x = event.clientX - rect.left;
-      draggingPoint.y = event.clientY - rect.top;
+      const coords = getCanvasCoordinates(event);
+      draggingPoint.x = coords.x;
+      draggingPoint.y = coords.y;
       keepPointInBounds(draggingPoint);
       redrawCanvas();
     }
@@ -326,17 +370,12 @@
     redrawCanvas();
   });
 
-  // Teljesen újraírt érintés kezelés mobilon
+  // Újraírt és javított érintés kezelés mobilon
   canvas.addEventListener('touchstart', function(event) {
     event.preventDefault();
     
-    const rect = canvas.getBoundingClientRect();
-    const touch = event.touches[0];
-    const touchX = touch.clientX - rect.left;
-    const touchY = touch.clientY - rect.top;
-    
-    // Keresünk egy érintett pontot
-    const touchedPoint = findTouchedPoint(touchX, touchY, touchRadius);
+    const coords = getCanvasCoordinates(event, 'touch');
+    const touchedPoint = findTouchedPoint(coords.x, coords.y, touchRadius);
     
     if (touchedPoint) {
       draggingPoint = touchedPoint;
@@ -350,11 +389,10 @@
     event.preventDefault();
     
     if (isDragging && draggingPoint) {
-      const rect = canvas.getBoundingClientRect();
-      const touch = event.touches[0];
+      const coords = getCanvasCoordinates(event, 'touch');
       
-      draggingPoint.x = touch.clientX - rect.left;
-      draggingPoint.y = touch.clientY - rect.top;
+      draggingPoint.x = coords.x;
+      draggingPoint.y = coords.y;
       
       keepPointInBounds(draggingPoint);
       redrawCanvas();
@@ -419,7 +457,7 @@
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
     
     // Másoljuk át a pontokat, nyilakat stb., de a margó nélkül
-    const originalCanvas = ctx;
+    const originalCtx = ctx;
     ctx = tempCtx;
     
     // Mentük a margó jelölést ideiglenesen
@@ -429,7 +467,7 @@
     redrawCanvas();
     
     // Visszaállítjuk az eredeti kontextust
-    ctx = originalCanvas;
+    ctx = originalCtx;
     
     // Letöltés
     const dataURL = tempCanvas.toDataURL('image/png');
