@@ -32,13 +32,22 @@
 
     .game-container {
       position: relative;
-/*      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);*/
-      border-radius: 8px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .game-instructions {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .canvas-container {
+      position: relative;
     }
 
     canvas {
-      border-radius: 8px;
       background-color: var(--background-color);
       display: block;
     }
@@ -50,7 +59,6 @@
       align-items: center;
       cursor: pointer;
       user-select: none;
-/*      transition: all 0.2s ease;*/
       font-size: 14px; /* Növelt méret */
       font-weight: bold;
       border-radius: 50%;
@@ -95,13 +103,31 @@
       margin-top: 20px;
       font-weight: bold;
       color: var(--success-color);
-      white-space: pre-line;
       text-align: center;
-      height: 40px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 10px;
       transition: opacity 0.5s ease-in-out;
+      line-height: 1.5;
+    }
+
+    .solution-link {
+      display: inline-block;
+      background-color: var(--primary-color);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .solution-link:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
     }
 
     @media (max-width: 600px) {
@@ -123,10 +149,12 @@
 
 <h1>🐰</h1>
 
-<p>Milyen betű kerül a 🥚 helyére?</p>
 <div class="game-container">
-  <canvas id="gameCanvas"></canvas>
-  <div id="controlButtons"></div>
+  <div class="game-instructions">Két szomszédos cellában léptetheted – mindkét irányban – a magyar ábécé betűit. A célszámok azt jelölik, hogy a megfelelő cellába az ábécé hanyadik betűjének kell kerülnie. A 🥚-sal jelzett mezőt nem számítva két értelmes szót kell kapnod. Milyen betű kerül a 🥚 helyére?</div>
+  <div class="canvas-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="controlButtons"></div>
+  </div>
 </div>
 
 <button id="resetButton" aria-label="Újraindítás">⟳</button>
@@ -145,6 +173,8 @@
       const controlButtonsDiv = document.getElementById('controlButtons');
       const resetButton = document.getElementById('resetButton');
       const congratsMessageDiv = document.getElementById('congratsMessage');
+      const gameInstructions = document.querySelector('.game-instructions');
+      const canvasContainer = document.querySelector('.canvas-container');
   
       const numRows = 7;
       const numCols = 5;
@@ -197,6 +227,11 @@
   
         canvas.width = numCols * cellSize;
         canvas.height = numRows * cellSize;
+        
+        // A játék szövegének szélességét a vászon szélességének 130%-ához igazítjuk
+        gameInstructions.style.width = `${canvas.width * 1.3}px`;
+        const maxWidth = isMobile ? '80%' : '100%';
+        gameInstructions.style.maxWidth = maxWidth; // Hogy ne lógjon túl mobilon
   
         drawTable();
         createControlButtons();
@@ -205,7 +240,7 @@
       function resetGame() {
         table = Array(numRows).fill().map(() => Array(numCols).fill(0));
         state = GameState.PLAYING;
-        congratsMessageDiv.textContent = '';
+        congratsMessageDiv.innerHTML = '';
         congratsMessageDiv.style.opacity = '0';
         activeCells.clear(); // Aktív cellák törlése
         drawTable();
@@ -214,40 +249,42 @@
   
       function drawTable() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-        // Növeljük a betűméretet, különösen mobilon
+
         const isMobile = window.innerWidth <= 600;
         const normalFontSize = isMobile ? cellSize * 0.4 : cellSize * 0.35;
         const smallFontSize = isMobile ? cellSize * 0.25 : cellSize * 0.22;
-  
+
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-  
+
         for (let i = 0; i < numRows; i++) {
           for (let j = 0; j < numCols; j++) {
             if (targetTable[i][j] !== null) {
               let targetIndex = abc.indexOf(targetTable[i][j]);
               let currentIndex = table[i][j];
               const cellKey = `${i},${j}`;
-  
-              // Determine cell background color
+
+              // Alapértelmezett háttérszín
+              let backgroundColor = 'white';
+
+              // Ha a cella betűt tartalmaz (nem null és nem '🥚')
+              if (targetTable[i][j] !== null && targetTable[i][j] !== '🥚') {
+                backgroundColor = 'rgba(255, 255, 204, 0.7)'; // Halványsárga, kis átlátszósággal
+              } 
               if (currentIndex === targetIndex) {
-                ctx.fillStyle = '#d5f5e3'; // Light green
-              } else if (currentIndex > targetIndex) {
-                ctx.fillStyle = '#fadbd8'; // Light red
-              } else if (activeCells.has(cellKey)) {
-                ctx.fillStyle = 'var(--active-cell-color)'; // Halványsárga az aktív cellákhoz
-              } else {
-                ctx.fillStyle = 'white';
-              }
-              
+                backgroundColor = '#d5f5e3'; // Világoszöld
+              } 
+              if (currentIndex > targetIndex) {
+                backgroundColor = '#fadbd8'; // Világospiros
+              } 
               if (targetTable[i][j] === '🥚') {
-                ctx.fillStyle = 'white';
+                  backgroundColor = 'rgba(255, 255, 204, 0.7)'; // Halványsárga, kis átlátszósággal
               }
-              
-              // Draw cell
+
+              // Cellaháttér beállítása
+              ctx.fillStyle = backgroundColor;
               ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
-              
+
               // Árnyékolás az aktív celláknak
               if (activeCells.has(cellKey)) {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
@@ -256,16 +293,17 @@
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
               }
-              
+
+              // Keret rajzolása
               ctx.strokeStyle = '#bdc3c7';
-              ctx.lineWidth = 1;
+              ctx.lineWidth = 1.5; // Kicsit vastagabb keret
               ctx.strokeRect(j * cellSize, i * cellSize, cellSize, cellSize);
-              
+
               // Reset shadow
               ctx.shadowColor = 'transparent';
               ctx.shadowBlur = 0;
-  
-              // Draw current value (letter)
+
+              // Betűk rajzolása
               ctx.fillStyle = '#2c3e50';
               ctx.font = `${normalFontSize}px 'Segoe UI', sans-serif`;
               ctx.fillText(
@@ -273,19 +311,20 @@
                 j * cellSize + cellSize / 2,
                 i * cellSize + cellSize / 2 - 10
               );
-  
-              // Draw target value (letter)
+
               ctx.font = `${smallFontSize}px 'Segoe UI', sans-serif`;
               ctx.fillStyle = '#7f8c8d';
+              let target = targetIndex === -1 ? '🥚' : targetIndex;
               ctx.fillText(
-                `${targetTable[i][j]}`,
+//                `${targetTable[i][j]}`,
+                `${target}`,
                 j * cellSize + cellSize / 2,
                 (i + 1) * cellSize - 20
               );
             }
           }
         }
-  
+
         checkIfSolved();
       }
   
@@ -323,8 +362,11 @@
         const button = document.createElement('div');
         button.classList.add('control-button');
         button.textContent = text;
-        button.style.left = `${left - 10}px`; // Növelt korrekció a középre igazításhoz
-        button.style.top = `${top - 10}px`;   // Növelt korrekció a középre igazításhoz
+        
+        // A gomb pozíciója csak a canvas-tól függ
+        button.style.left = `${left - 10}px`; // Korrekció a középre igazításhoz
+        button.style.top = `${top - 10}px`;   // Korrekció a középre igazításhoz
+        
         button.addEventListener('click', clickHandler);
         controlButtonsDiv.appendChild(button);
       }
@@ -382,7 +424,9 @@
   
         if (state !== GameState.SOLVED) {
           state = GameState.SOLVED;
-          congratsMessageDiv.textContent = "Megoldottad a feladatot, gratulálunk! 🎉";
+          // Két soros gratuláló üzenet és formázott link gomb
+          congratsMessageDiv.innerHTML = '<div>Megoldottad a feladatot, gratulálunk! 🎉</div>';
+          congratsMessageDiv.innerHTML += '<a href="https://forms.gle/mxkCY1FfCW77xXRH6" target="blank" class="solution-link">Küldd be a megoldást</a>';
           congratsMessageDiv.style.opacity = '1';
   
           // Animate the success message
@@ -397,6 +441,7 @@
       // Initialize the game
       setupEventListeners();
       resizeCanvas();
+
     });
   </script>
 
