@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <title>🐰</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary-color: #3498db;
+      --primary-hover: #2980b9;
+      --success-color: #2ecc71;
+      --error-color: #e74c3c;
+      --background-color: #f9f9f9;
+      --text-color: #333;
+      --active-cell-color: #FFF9C4; /* Halványsárga háttér az aktív celláknak */
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-color);
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .game-container {
+      position: relative;
+/*      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);*/
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    canvas {
+      border-radius: 8px;
+      background-color: var(--background-color);
+      display: block;
+    }
+
+    .control-button {
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+/*      transition: all 0.2s ease;*/
+      font-size: 14px; /* Növelt méret */
+      font-weight: bold;
+      border-radius: 50%;
+      color: white;
+      background-color: var(--primary-color);
+      width: 20px; /* Növelt méret */
+      height: 20px; /* Növelt méret */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-button:active {
+      transform: scale(0.95);
+    }
+
+    #resetButton {
+      margin-top: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #resetButton:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    #resetButton:active {
+      transform: scale(0.95);
+    }
+
+    #congratsMessage {
+      margin-top: 20px;
+      font-weight: bold;
+      color: var(--success-color);
+      white-space: pre-line;
+      text-align: center;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    @media (max-width: 600px) {
+      .control-button {
+        width: 20px; /* Növelt méret mobilon */
+        height: 20px; /* Növelt méret mobilon */
+        font-size: 14px; /* Növelt betűméret mobilon */
+      }
+
+      #resetButton {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h1>🐰</h1>
+
+<p>Milyen betű kerül a 🥚 helyére?</p>
+<div class="game-container">
+  <canvas id="gameCanvas"></canvas>
+  <div id="controlButtons"></div>
+</div>
+
+<button id="resetButton" aria-label="Újraindítás">⟳</button>
+
+<div id="congratsMessage"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const GameState = {
+        PLAYING: 'playing',
+        SOLVED: 'solved'
+      };
+  
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const controlButtonsDiv = document.getElementById('controlButtons');
+      const resetButton = document.getElementById('resetButton');
+      const congratsMessageDiv = document.getElementById('congratsMessage');
+  
+      const numRows = 7;
+      const numCols = 5;
+      let cellSize = 0;
+      let state = GameState.PLAYING;
+  
+      let table = Array(numRows).fill().map(() => Array(numCols).fill(0));
+      
+      // Aktív cellák nyilvántartása
+      let activeCells = new Set();
+  
+      const abc = [
+        'a', 'á', 'b', 'c', 'cs',
+        'd', 'dz', 'dzs', 'e', 'é',
+        'f', 'g', 'gy', 'h', 'i',
+        'í', 'j', 'k', 'l', 'ly',
+        'm', 'n', 'ny', 'o', 'ó',
+        'ö', 'ő', 'p', 'q', 'r',
+        's', 'sz', 't', 'ty', 'u',
+        'ú', 'ü', 'ű', 'v', 'w',
+        'x', 'y', 'z', 'zs'
+      ];
+  
+      const targetTable = [
+        [abc[13], null, null, null, abc[8]],
+        [abc[35], null, null, null, abc[30]],
+        [abc[30], null, null, null, abc[32]],
+        [abc[38], abc[13], abc[15], abc[20], abc[23]],
+        [abc[9], null, null, null, abc[16]],
+        [abc[32], null, null, null, abc[1]],
+        ['🥚', null, null, null, abc[30]]
+      ];
+  
+      function setupEventListeners() {
+        resetButton.addEventListener('click', resetGame);
+        window.addEventListener('resize', resizeCanvas);
+      }
+  
+      function resizeCanvas() {
+        const isMobile = window.innerWidth <= 600;
+        const minDimension = Math.min(isMobile ? 350 : 600, window.innerHeight);
+        
+        // Növeljük a cella méretét mobilon
+        cellSize = Math.floor(minDimension / Math.max(numRows, numCols));
+        
+        // Mobilon növeljük a cellák méretét
+        if (isMobile) {
+          cellSize = Math.floor(cellSize * 1.2); // 20%-kal nagyobb cellák mobilon
+        }
+  
+        canvas.width = numCols * cellSize;
+        canvas.height = numRows * cellSize;
+  
+        drawTable();
+        createControlButtons();
+      }
+  
+      function resetGame() {
+        table = Array(numRows).fill().map(() => Array(numCols).fill(0));
+        state = GameState.PLAYING;
+        congratsMessageDiv.textContent = '';
+        congratsMessageDiv.style.opacity = '0';
+        activeCells.clear(); // Aktív cellák törlése
+        drawTable();
+        createControlButtons();
+      }
+  
+      function drawTable() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+        // Növeljük a betűméretet, különösen mobilon
+        const isMobile = window.innerWidth <= 600;
+        const normalFontSize = isMobile ? cellSize * 0.4 : cellSize * 0.35;
+        const smallFontSize = isMobile ? cellSize * 0.25 : cellSize * 0.22;
+  
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+  
+        for (let i = 0; i < numRows; i++) {
+          for (let j = 0; j < numCols; j++) {
+            if (targetTable[i][j] !== null) {
+              let targetIndex = abc.indexOf(targetTable[i][j]);
+              let currentIndex = table[i][j];
+              const cellKey = `${i},${j}`;
+  
+              // Determine cell background color
+              if (currentIndex === targetIndex) {
+                ctx.fillStyle = '#d5f5e3'; // Light green
+              } else if (currentIndex > targetIndex) {
+                ctx.fillStyle = '#fadbd8'; // Light red
+              } else if (activeCells.has(cellKey)) {
+                ctx.fillStyle = 'var(--active-cell-color)'; // Halványsárga az aktív cellákhoz
+              } else {
+                ctx.fillStyle = 'white';
+              }
+              
+              if (targetTable[i][j] === '🥚') {
+                ctx.fillStyle = 'white';
+              }
+              
+              // Draw cell
+              ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+              
+              // Árnyékolás az aktív celláknak
+              if (activeCells.has(cellKey)) {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                ctx.shadowBlur = 6;
+              } else {
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+              }
+              
+              ctx.strokeStyle = '#bdc3c7';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(j * cellSize, i * cellSize, cellSize, cellSize);
+              
+              // Reset shadow
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+  
+              // Draw current value (letter)
+              ctx.fillStyle = '#2c3e50';
+              ctx.font = `${normalFontSize}px 'Segoe UI', sans-serif`;
+              ctx.fillText(
+                abc[table[i][j]],
+                j * cellSize + cellSize / 2,
+                i * cellSize + cellSize / 2 - 10
+              );
+  
+              // Draw target value (letter)
+              ctx.font = `${smallFontSize}px 'Segoe UI', sans-serif`;
+              ctx.fillStyle = '#7f8c8d';
+              ctx.fillText(
+                `${targetTable[i][j]}`,
+                j * cellSize + cellSize / 2,
+                (i + 1) * cellSize - 20
+              );
+            }
+          }
+        }
+  
+        checkIfSolved();
+      }
+  
+      function createControlButtons() {
+        controlButtonsDiv.innerHTML = '';
+  
+        // Create horizontal buttons
+        for (let i = 0; i < numRows; i++) {
+          for (let j = 0; j < numCols - 1; j++) {
+            if (targetTable[i][j] !== null && targetTable[i][j + 1] !== null) {
+              const x = (j + 1) * cellSize;
+              const y1 = i * cellSize + 1.2 * cellSize / 4;
+              const y2 = i * cellSize + 2.8 * cellSize / 4;
+              createButton('+', x, y1, () => incrementHorizontal(i, j));
+              createButton('-', x, y2, () => decrementHorizontal(i, j));
+            }
+          }
+        }
+  
+        // Create vertical buttons
+        for (let i = 0; i < numRows - 1; i++) {
+          for (let j = 0; j < numCols; j++) {
+            if (targetTable[i][j] !== null && targetTable[i + 1][j] !== null) {
+              const x1 = j * cellSize + 1.2 * cellSize / 4;
+              const x2 = j * cellSize + 2.8 * cellSize / 4;
+              const y = (i + 1) * cellSize;
+              createButton('+', x1, y, () => incrementVertical(i, j));
+              createButton('-', x2, y, () => decrementVertical(i, j));
+            }
+          }
+        }
+      }
+  
+      function createButton(text, left, top, clickHandler) {
+        const button = document.createElement('div');
+        button.classList.add('control-button');
+        button.textContent = text;
+        button.style.left = `${left - 10}px`; // Növelt korrekció a középre igazításhoz
+        button.style.top = `${top - 10}px`;   // Növelt korrekció a középre igazításhoz
+        button.addEventListener('click', clickHandler);
+        controlButtonsDiv.appendChild(button);
+      }
+
+      function incrementHorizontal(y, x) {
+        if (state === GameState.PLAYING) {
+          if (table[y][x] < abc.length - 1 && table[y][x + 1] < abc.length - 1) {
+            table[y][x]++;
+            table[y][x + 1]++;
+            drawTable();
+          }
+        }
+      }
+
+      function decrementHorizontal(y, x) {
+        if (state === GameState.PLAYING) {
+          if (table[y][x] > 0 && table[y][x + 1] > 0) {
+            table[y][x]--;
+            table[y][x + 1]--;
+            drawTable();
+          }
+        }
+      }
+
+      function incrementVertical(y, x) {
+        if (state === GameState.PLAYING) {
+          if (table[y][x] < abc.length - 1 && table[y + 1][x] < abc.length - 1) {
+            table[y][x]++;
+            table[y + 1][x]++;
+            drawTable();
+          }
+        }
+      }
+
+      function decrementVertical(y, x) {
+        if (state === GameState.PLAYING) {
+          if (table[y][x] > 0 && table[y + 1][x] > 0) {
+            table[y][x]--;
+            table[y + 1][x]--;
+            drawTable();
+          }
+        }
+      }
+              
+      function checkIfSolved() {
+        for (let i = 0; i < numRows; i++) {
+          for (let j = 0; j < numCols; j++) {
+            if (targetTable[i][j] !== '🥚') {
+                if (targetTable[i][j] !== null && table[i][j] !== abc.indexOf(targetTable[i][j])) {
+                  return false;
+                }
+            }
+          }
+        }
+  
+        if (state !== GameState.SOLVED) {
+          state = GameState.SOLVED;
+          congratsMessageDiv.textContent = "Megoldottad a feladatot, gratulálunk! 🎉";
+          congratsMessageDiv.style.opacity = '1';
+  
+          // Animate the success message
+          setTimeout(() => {
+            congratsMessageDiv.style.opacity = '1';
+          }, 100);
+        }
+  
+        return true;
+      }
+  
+      // Initialize the game
+      setupEventListeners();
+      resizeCanvas();
+    });
+  </script>
+
+</body>
+</html>
