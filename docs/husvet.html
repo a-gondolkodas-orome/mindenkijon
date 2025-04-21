@@ -314,7 +314,7 @@
 
               ctx.font = `${smallFontSize}px 'Segoe UI', sans-serif`;
               ctx.fillStyle = '#7f8c8d';
-              let target = targetIndex === -1 ? '🥚' : targetIndex;
+              let target = targetIndex === -1 ? '🥚' : targetIndex + 1;
               ctx.fillText(
 //                `${targetTable[i][j]}`,
                 `${target}`,
@@ -425,8 +425,7 @@
         if (state !== GameState.SOLVED) {
           state = GameState.SOLVED;
           // Két soros gratuláló üzenet és formázott link gomb
-          congratsMessageDiv.innerHTML = '<div>Megoldottad a feladatot, gratulálunk! 🎉</div>';
-          congratsMessageDiv.innerHTML += '<a href="https://forms.gle/mxkCY1FfCW77xXRH6" target="blank" class="solution-link">Küldd be a megoldást</a>';
+          congratsMessageDiv.innerHTML += '<div>Megoldottad a feladatot, gratulálunk! 🎉</div>';
           congratsMessageDiv.style.opacity = '1';
   
           // Animate the success message
@@ -441,6 +440,7 @@
       // Initialize the game
       setupEventListeners();
       resizeCanvas();
+      congratsMessageDiv.innerHTML = '<a href="https://forms.gle/mxkCY1FfCW77xXRH6" target="blank" class="solution-link">Küldd be a megoldást</a>';
 
     });
   </script>
