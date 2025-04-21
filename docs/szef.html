@@ -3,6 +3,16 @@
 <head>
 <title>Széf</title>
 <style>
+        :root {
+      --primary-color: #3498db;
+      --primary-hover: #2980b9;
+      --success-color: #2ecc71;
+      --error-color: #e74c3c;
+      --background-color: #f9f9f9;
+      --text-color: #333;
+      --active-cell-color: #FFF9C4; /* Halványsárga háttér az aktív celláknak */
+    }
+
   body {
     display: flex;
     flex-direction: column;
@@ -50,11 +60,38 @@
     justify-content: center;
     align-items: center;
   }
-  #congratsMessage {
-    margin-top: 20px;
-    font-weight: bold;
-    color: green;
-  }
+
+#congratsMessage {
+      margin-top: 20px;
+      font-weight: bold;
+      color: var(--success-color);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.5s ease-in-out;
+      line-height: 1.5;
+    }
+
+    .solution-link {
+      display: inline-block;
+      background-color: var(--primary-color);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .solution-link:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -97,6 +134,8 @@
     [3, 4, 5, 4]
   ];
 
+  let checkNumber = 0;
+
   function drawTable() {
     const canvasWidth = window.innerWidth <= 600 ? 300 : 400;
     const canvasHeight = window.innerWidth <= 600 ? 300 : 400;
@@ -114,9 +153,9 @@
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
         if (table[i][j] === targetTable[i][j]) {
-          ctx.fillStyle = 'lightgreen';
+          ctx.fillStyle = '#d5f5e3'; // világoszöld
         } else if (table[i][j] > targetTable[i][j]) {
-          ctx.fillStyle = 'lightcoral';
+          ctx.fillStyle = '#fadbd8'; // világospiros
         } else {
           ctx.fillStyle = 'white';
         }
@@ -149,6 +188,10 @@
       for (let j = x; j < x + 2; j++) {
         table[i][j]++;
       }
+    }
+    if (x === 1 && y === 1) {
+        checkNumber++;
+        console.log(checkNumber);
     }
     drawTable();
   }
@@ -200,7 +243,13 @@
         }
       }
     }
-    congratsMessageDiv.textContent = "Megoldottad a feladatot, gratulálunk!";
+    congratsMessageDiv.innerHTML = '<div>Megoldottad a feladatot, gratulálunk! 🎉</div>';
+    congratsMessageDiv.innerHTML += `A középső gombot ${checkNumber} alkalommal nyomtad meg.`;
+    congratsMessageDiv.innerHTML += '<a href="https://a-gondolkodas-orome.github.io/mindenkijon/husvet.html" target="blank" class="solution-link">Próbálj ki egy új feladatot</a>';
+
+    congratsMessageDiv.style.opacity = '1';
+
+
     return true;
   }
 
