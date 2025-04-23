@@ -11,6 +11,8 @@
             --shore-color: #a18072;
             --fisherman-color: #a89187;
             --active-line-color: orange; /* Aktív damil színe */
+            --cell-size: 50px; /* Egységes cellaméret */
+            --mobil-cell-size: 28px;
         }
         body {
             font-family: Arial, sans-serif;
@@ -37,8 +39,10 @@
         }
         
         td {
-            width: 50px;
-            height: 50px;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            min-width: var(--cell-size);
+            min-height: var(--cell-size);
             border: 1px solid var(--grid-color);
             text-align: center;
             vertical-align: middle;
@@ -158,7 +162,7 @@
         }
         
         .reset-button:hover {
-            background-color: #c0392b;
+            background-color: #28852b;
         }
         
         .controls {
@@ -167,6 +171,32 @@
             gap: 10px;
             justify-content: center;
         }
+
+        @media only screen and (max-width: 600px) {
+            td {
+                font-size: 20px;
+                width: var(--mobil-cell-size);
+                height: var(--mobil-cell-size);
+                min-width: var(--mobil-cell-size);
+                min-height: var(--mobil-cell-size);
+
+            }
+            .fisherman {
+                font-size: 20px;
+            }
+            .fish {
+                font-size: 20px;
+            }
+            .line-counter {
+                width: 12px;
+                height: 12px;
+            }
+            .caught-fish::after {
+                font-size: 12px;
+            }
+
+        }
+
     </style>
 </head>
 <body>
