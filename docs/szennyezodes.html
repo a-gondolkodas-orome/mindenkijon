@@ -207,6 +207,8 @@
             const rect = canvas.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
+            
+            checkPoolInteraction(x, y);
         }
 
         function resizeCanvas() {
@@ -225,7 +227,7 @@
             
             // A medencék közötti távolság is adaptív
             const gapSize = isMobile ? 
-                          Math.max(10, 30 * (screenWidth / 650)) : 
+                          Math.max(15, 30 * (screenWidth / 650)) : 
                           30; // Eredeti távolság asztali gépen
             
             const poolDiameterWithGap = (poolRadius * 2) + gapSize;
@@ -241,7 +243,7 @@
         function createPoolsData() {
             poolsData = [];
             const gapSize = isMobile ? 
-                          Math.max(10, 30 * (canvasWidth / 650)) : 
+                          Math.max(15, 30 * (canvasWidth / 650)) : 
                           30;
             
             const poolDiameterWithGap = (poolRadius * 2) + gapSize;
@@ -268,12 +270,12 @@
                 // Nyíl jobbra
                 if (col < numCols - 1) {
                     const nextPool = poolsData[index + 1];
-                    const fromX = pool.x + poolRadius + 5;
-                    const toX = nextPool.x - poolRadius - 5;
+                    const fromX = pool.x + poolRadius + 2;
+                    const toX = nextPool.x - poolRadius - 2;
                     const midY = pool.y;
                     
-                    // Ha van elég hely a nyílnak
-                    if (toX > fromX + 15) {
+                    // Mobilon is megjelenjenek a nyilak
+                    if (toX > fromX + 5) {
                         drawArrow(fromX, midY, toX, midY);
                     }
                 }
@@ -281,12 +283,12 @@
                 // Nyíl lefelé
                 if (row < numRows - 1) {
                     const nextPool = poolsData[index + numCols];
-                    const fromY = pool.y + poolRadius + 5;
-                    const toY = nextPool.y - poolRadius - 5;
+                    const fromY = pool.y + poolRadius + 2;
+                    const toY = nextPool.y - poolRadius - 2;
                     const midX = pool.x;
                     
-                    // Ha van elég hely a nyílnak
-                    if (toY > fromY + 15) {
+                    // Mobilon is megjelenjenek a nyilak
+                    if (toY > fromY + 5) {
                         drawArrow(midX, fromY, midX, toY);
                     }
                 }
@@ -325,26 +327,30 @@
         }
 
         function drawArrow(fromX, fromY, toX, toY) {
-            const headlen = isMobile ? poolRadius * 0.35 : 10; // Eredeti méret asztali gépen
+            // Mobilon javítva a nyilak megjelenítése
+            const headlen = isMobile ? Math.max(5, poolRadius * 0.3) : 10; // Mobilon kisebb nyílhegy
             const dx = toX - fromX;
             const dy = toY - fromY;
             const angle = Math.atan2(dy, dx);
             const length = Math.sqrt(dx * dx + dy * dy);
             
-            // Nyíl kezdő és végpontjának beállítása
-            const shortening = Math.min(5, length * 0.1);
+            // Rövidebb nyíl mobilon, hogy biztosan legyen elég hely
+            const shortening = isMobile ? Math.min(3, length * 0.1) : Math.min(5, length * 0.1);
             const actualToX = toX - shortening * Math.cos(angle);
             const actualToY = toY - shortening * Math.sin(angle);
+            
+            // Nyíl testének vonalvastagsága mobilon kisebb
+            const lineWidth = isMobile ? Math.max(1, poolRadius * 0.05) : 2;
             
             // Nyíl teste
             ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(actualToX, actualToY);
             ctx.strokeStyle = '#1e3a8a';
-            ctx.lineWidth = isMobile ? Math.max(1, poolRadius * 0.06) : 2;
+            ctx.lineWidth = lineWidth;
             ctx.stroke();
 
-            // Nyílhegy
+            // Nyílhegy - mobilon is jól látható
             ctx.beginPath();
             ctx.moveTo(toX, toY);
             ctx.lineTo(
@@ -388,8 +394,6 @@
         }
 
         function checkPollution(index) {
-            console.log(checkedPools[index]);
-            console.log(index);
             if (checkedPools[index] !== null) {
                 document.getElementById('message').textContent = `Erre a medencére már rákérdeztél.`;
                 return;
