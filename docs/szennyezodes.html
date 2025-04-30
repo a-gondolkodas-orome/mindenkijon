@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Szennyeződés</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -37,6 +38,7 @@
             max-width: 650px;
             height: auto;
             background-color: #f0f8ff;
+            touch-action: manipulation;
         }
         #message {
             margin: 15px 0;
@@ -72,6 +74,7 @@
             box-sizing: border-box;
             text-align: center;
             font-size: 15px;
+            -webkit-appearance: none;
         }
         #guess:focus {
             outline: none;
@@ -96,6 +99,8 @@
             font-weight: 500;
             width: 45%;
             max-width: 180px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         button:hover {
             background-color: #2d4eb8;
@@ -109,6 +114,31 @@
             color: #000000;
             padding: 5px 10px;
             display: inline-block;
+        }
+        
+        /* Mobilra optimalizált stílusok */
+        @media (max-width: 650px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                margin-bottom: 10px;
+                font-size: 20px;
+            }
+            .game-container {
+                width: 95%;
+            }
+            #pools-canvas {
+                width: 100%;
+            }
+            .input-area {
+                width: 95%;
+                padding: 10px;
+            }
+            button {
+                width: 100%;
+                padding: 12px 15px;
+            }
         }
     </style>
 </head>
@@ -126,7 +156,7 @@
 
     <div class="input-area">
         <label for="guess">Tippeld meg a szennyezés forrását:</label>
-        <input type="number" id="guess" min="1" max="15" placeholder="Medence száma (1-15)">
+        <input type="number" id="guess" min="1" max="15" placeholder="Medence száma (1-15)" inputmode="numeric">
         <button onclick="checkGuess()">Tippelés</button>
         <p id="question-count">Feltett kérdések száma: 0</p>
     </div>
@@ -141,31 +171,81 @@
         let potentialSources = Array.from({ length: numPools }, (_, i) => i);
         let questionCount = 0;
         let checkedPools = new Array(numPools).fill(null);
-        const poolRadius = 25; // Kicsit kisebb medencék
-        const arrowLength = 35;
+        let poolRadius;
+        let arrowLength;
         let canvasWidth;
         let canvasHeight;
+        let initialTouchY;
+        let isMobile = window.innerWidth <= 650;
 
         function initCanvas() {
             canvas = document.getElementById('pools-canvas');
             ctx = canvas.getContext('2d');
             resizeCanvas();
-            canvas.addEventListener('click', handleCanvasClick);
+            
+            // Eseménykezelők mind mobil, mind asztali gép esetén
+            canvas.addEventListener('click', handleCanvasInteraction);
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+            
+            // Alap érintés események kezelése
+            canvas.addEventListener('touchmove', function(e) {
+                if (Math.abs(e.touches[0].clientY - initialTouchY) < 10) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        function handleTouchStart(event) {
+            initialTouchY = event.touches[0].clientY;
+        }
+
+        function handleTouchEnd(event) {
+            if (event.changedTouches.length === 0) return;
+            
+            const touch = event.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
         }
 
         function resizeCanvas() {
-            canvasWidth = Math.min(canvas.offsetWidth, 650);
-            const poolDiameterWithGap = (poolRadius * 2) + 30; // Nagyobb távolság a medencék között
+            const screenWidth = window.innerWidth;
+            isMobile = screenWidth <= 650;
+            
+            // Alapértelmezett desktop méret, de maximum a képernyő szélessége
+            canvasWidth = isMobile ? Math.min(screenWidth - 20, 650) : Math.min(650, screenWidth - 40);
+            
+            // Desktop és mobil esetén különböző méretű medencék
+            poolRadius = isMobile ? 
+                         (screenWidth < 400 ? 20 : 22) : 
+                         25; // Eredeti méret asztali gépen
+            
+            arrowLength = poolRadius * 1.4;
+            
+            // A medencék közötti távolság is adaptív
+            const gapSize = isMobile ? 
+                          Math.max(10, 30 * (screenWidth / 650)) : 
+                          30; // Eredeti távolság asztali gépen
+            
+            const poolDiameterWithGap = (poolRadius * 2) + gapSize;
             canvasHeight = (numRows * poolDiameterWithGap) + 30;
+            
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
+            
+            createPoolsData();
             drawPools();
         }
 
         function createPoolsData() {
             poolsData = [];
-            const poolDiameterWithGap = (poolRadius * 2) + 30; // Nagyobb távolság a medencék között
-            const startX = (canvasWidth - (numCols * poolDiameterWithGap - 30)) / 2 + poolRadius;
+            const gapSize = isMobile ? 
+                          Math.max(10, 30 * (canvasWidth / 650)) : 
+                          30;
+            
+            const poolDiameterWithGap = (poolRadius * 2) + gapSize;
+            const startX = (canvasWidth - (numCols * poolDiameterWithGap - gapSize)) / 2 + poolRadius;
             const startY = 25 + poolRadius;
 
             for (let i = 0; i < numPools; i++) {
@@ -185,11 +265,9 @@
                 const row = Math.floor(index / numCols);
                 const col = index % numCols;
 
-                // A nyilakat a medencék között rajzoljuk
                 // Nyíl jobbra
                 if (col < numCols - 1) {
                     const nextPool = poolsData[index + 1];
-                    const distance = nextPool.x - pool.x;
                     const fromX = pool.x + poolRadius + 5;
                     const toX = nextPool.x - poolRadius - 5;
                     const midY = pool.y;
@@ -203,7 +281,6 @@
                 // Nyíl lefelé
                 if (row < numRows - 1) {
                     const nextPool = poolsData[index + numCols];
-                    const distance = nextPool.y - pool.y;
                     const fromY = pool.y + poolRadius + 5;
                     const toY = nextPool.y - poolRadius - 5;
                     const midX = pool.x;
@@ -234,9 +311,13 @@
                 ctx.strokeStyle = '#1e3a8a';
                 ctx.stroke();
 
-                // Medence száma
+                // Medence száma - asztali gépen fix méret, mobilon adaptív
+                const fontSize = isMobile ? 
+                                 Math.max(12, Math.min(15, poolRadius * 0.6)) : 
+                                 15; // Eredeti betűméret asztali gépen
+                
                 ctx.fillStyle = '#000';
-                ctx.font = '15px sans-serif';
+                ctx.font = `${fontSize}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(pool.number, pool.x, pool.y);
@@ -244,14 +325,13 @@
         }
 
         function drawArrow(fromX, fromY, toX, toY) {
-            const headlen = 10; // Nyílhegy mérete
+            const headlen = isMobile ? poolRadius * 0.35 : 10; // Eredeti méret asztali gépen
             const dx = toX - fromX;
             const dy = toY - fromY;
             const angle = Math.atan2(dy, dx);
             const length = Math.sqrt(dx * dx + dy * dy);
             
             // Nyíl kezdő és végpontjának beállítása
-            // Ha a nyíl hossza elég nagy, akkor a nyíl teljes hosszát rajzoljuk
             const shortening = Math.min(5, length * 0.1);
             const actualToX = toX - shortening * Math.cos(angle);
             const actualToY = toY - shortening * Math.sin(angle);
@@ -261,7 +341,7 @@
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(actualToX, actualToY);
             ctx.strokeStyle = '#1e3a8a';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = isMobile ? Math.max(1, poolRadius * 0.06) : 2;
             ctx.stroke();
 
             // Nyílhegy
@@ -288,20 +368,28 @@
             return targetRow >= sourceRow && targetCol >= sourceCol;
         }
 
-        function handleCanvasClick(event) {
+        function handleCanvasInteraction(event) {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
-
+            
+            checkPoolInteraction(x, y);
+        }
+        
+        function checkPoolInteraction(x, y) {
             poolsData.forEach((pool, index) => {
+                // Mobilon nagyobb érintési terület
+                const touchRadius = isMobile ? poolRadius * 1.2 : poolRadius;
                 const distance = Math.sqrt((x - pool.x) ** 2 + (y - pool.y) ** 2);
-                if (distance < poolRadius) {
+                if (distance < touchRadius) {
                     checkPollution(index);
                 }
             });
         }
 
         function checkPollution(index) {
+            console.log(checkedPools[index]);
+            console.log(index);
             if (checkedPools[index] !== null) {
                 document.getElementById('message').textContent = `Erre a medencére már rákérdeztél.`;
                 return;
@@ -340,11 +428,11 @@
 
             poolsData[index].contaminated = isActuallyContaminated;
             poolsData[index].clean = !isActuallyContaminated;
-            drawPools();
 
             const messageElement = document.getElementById('message');
             messageElement.textContent = `A(z) ${index + 1}. medence ${isActuallyContaminated ? 'szennyezett.' : 'tiszta.'}`;
 
+            drawPools();
             updatePotentialSourcesDisplay();
         }
 
@@ -361,6 +449,11 @@
             if (potentialSources.length === 1 && potentialSources[0] === guessedSource) {
                 messageElement.textContent = `Gratulálok! A(z) ${guessedSource + 1}. medence volt a szennyezés forrása.`;
                 revealPollution(guessedSource);
+                
+                // Csak mobilon görgetünk automatikusan
+                if (isMobile) {
+                    canvas.scrollIntoView({behavior: "smooth", block: "center"});
+                }
             } else {
                 let otherPotentialSource;
                 const otherPotentialSources = potentialSources.filter(s => s !== guessedSource);
@@ -368,8 +461,15 @@
                     const randomIndex = Math.floor(Math.random() * otherPotentialSources.length);
                     otherPotentialSource = otherPotentialSources[randomIndex] + 1;
                 }
-//                messageElement.textContent = `Sajnálom, nem a(z) ${guessedSource + 1}. medence volt a szennyezés forrása. A ${potentialSources.map(s => s + 1).join(', ')}.`;
                 messageElement.textContent = `Sajnálom, a tipped (${guessedSource + 1}.) nem talált, a ${otherPotentialSource}. medence volt a forrás.`;
+                
+                // Megmutatjuk a helyes választ
+                revealPollution(otherPotentialSources[0]);
+                
+                // Csak mobilon görgetünk automatikusan
+                if (isMobile) {
+                    canvas.scrollIntoView({behavior: "smooth", block: "center"});
+                }
             }
         }
 
@@ -397,7 +497,7 @@
             ctx.strokeStyle = '#ff9800';
             ctx.stroke();
             
-            // Második kijelölés, pulzáló hatást adhat később, ha animációt adnánk hozzá
+            // Második kijelölés
             ctx.beginPath();
             ctx.arc(poolsData[source].x, poolsData[source].y, poolRadius + 6, 0, 2 * Math.PI);
             ctx.lineWidth = 1;
@@ -427,10 +527,21 @@
             drawPools();
         }
 
-        window.addEventListener('resize', resizeCanvas);
+        // Átméretezésnél újrarajzolás és a mobilos állapot frissítése
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+        });
+        
+        // Enter billentyű támogatása a tippeléshez
+        document.getElementById('guess').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+        
+        // Oldal betöltésekor inicializálás
         window.addEventListener('load', () => {
             initCanvas();
-            createPoolsData();
             drawPools();
         });
     </script>
