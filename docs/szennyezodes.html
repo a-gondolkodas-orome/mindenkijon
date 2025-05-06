@@ -206,9 +206,7 @@
             const touch = event.changedTouches[0];
             const rect = canvas.getBoundingClientRect();
             const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            
-            checkPoolInteraction(x, y);
+            const y = touch.clientY - rect.top;            
         }
 
         function resizeCanvas() {
