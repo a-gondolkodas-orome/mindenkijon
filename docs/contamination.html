@@ -432,7 +432,7 @@
             poolsData[index].clean = !isActuallyContaminated;
 
             const messageElement = document.getElementById('message');
-            messageElement.textContent = `Pool number ${index + 1} is ${isActuallyContaminated ? 'contaminated.' : 'clean.'}`;
+            messageElement.textContent = `Pool ${index + 1} is ${isActuallyContaminated ? 'contaminated.' : 'clean.'}`;
 
             drawPools();
             updatePotentialSourcesDisplay();
@@ -449,7 +449,7 @@
             }
 
             if (potentialSources.length === 1 && potentialSources[0] === guessedSource) {
-                messageElement.textContent = `Congratulations! Pool number ${guessedSource + 1} was the source of the contamination.`;
+                messageElement.textContent = `Congratulations! Pool ${guessedSource + 1} was the source of the contamination.`;
                 revealPollution(guessedSource);
                 
                 // Csak mobilon görgetünk automatikusan
@@ -463,7 +463,7 @@
                     const randomIndex = Math.floor(Math.random() * otherPotentialSources.length);
                     otherPotentialSource = otherPotentialSources[randomIndex] + 1;
                 }
-                messageElement.textContent = `Sorry, your guess (${guessedSource + 1}) was incorrect — the source was pool number ${otherPotentialSource}.`;
+                messageElement.textContent = `Sorry, your guess (${guessedSource + 1}) was incorrect — the source was pool ${otherPotentialSource}.`;
                 
                 // Megmutatjuk a helyes választ
                 revealPollution(otherPotentialSources[0]);
