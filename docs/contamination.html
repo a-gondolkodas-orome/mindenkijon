@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Contamination</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #000000;
+            font-size: 24px;
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            width: 95%;
+            max-width: 650px;
+            margin-bottom: 15px;
+            background-color: #f0f8ff;
+            border: 1px solid #1e3a8a;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        #pools-canvas {
+            width: 100%;
+            max-width: 650px;
+            height: auto;
+            background-color: #f0f8ff;
+            touch-action: manipulation;
+        }
+        #message {
+            margin: 15px 0;
+            font-weight: bold;
+            color: #000000;
+            padding: 8px 12px;
+            min-height: 20px;
+        }
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 95%;
+            max-width: 350px;
+            margin: 10px auto;
+            background-color: #f0f8ff;
+            border: 1px solid #1e3a8a;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        label {
+            margin-bottom: 10px;
+            color: #000000;
+            font-weight: 500;
+            font-size: 15px;
+        }
+        #guess {
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #1e3a8a;
+            border-radius: 4px;
+            width: 50%;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 15px;
+            -webkit-appearance: none;
+        }
+        #guess:focus {
+            outline: none;
+            border-color: #1e3a8a;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+            box-sizing: border-box;
+            font-weight: 500;
+            width: 45%;
+            max-width: 180px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        button:hover {
+            background-color: #2d4eb8;
+        }
+        button:active {
+            opacity: 0.9;
+        }
+        #question-count {
+            margin-top: 15px;
+            font-style: italic;
+            color: #000000;
+            padding: 5px 10px;
+            display: inline-block;
+        }
+        
+        /* Mobilra optimalizált stílusok */
+        @media (max-width: 650px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                margin-bottom: 10px;
+                font-size: 20px;
+            }
+            .game-container {
+                width: 95%;
+            }
+            #pools-canvas {
+                width: 100%;
+            }
+            .input-area {
+                width: 95%;
+                padding: 10px;
+            }
+            button {
+                width: 100%;
+                padding: 12px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Contamination</h1>
+
+    <div class="game-container">
+        <canvas id="pools-canvas"></canvas>
+    </div>
+
+    <p id="message"></p>
+    
+    <button id="reset-button" onclick="resetGame()">Restart</button>
+
+    <div class="input-area">
+        <label for="guess">Guess the source of the contamination: </label>
+        <input type="number" id="guess" min="1" max="15" placeholder="Pool (1-15)" inputmode="numeric">
+        <button onclick="checkGuess()">Submit</button>
+        <p id="question-count">Number of questions: 0</p>
+    </div>
+
+    <script>
+        const numRows = 3;
+        const numCols = 5;
+        const numPools = numRows * numCols;
+        let canvas;
+        let ctx;
+        let poolsData = [];
+        let potentialSources = Array.from({ length: numPools }, (_, i) => i);
+        let questionCount = 0;
+        let checkedPools = new Array(numPools).fill(null);
+        let poolRadius;
+        let arrowLength;
+        let canvasWidth;
+        let canvasHeight;
+        let initialTouchY;
+        let isMobile = window.innerWidth <= 650;
+
+        function initCanvas() {
+            canvas = document.getElementById('pools-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            
+            // Eseménykezelők mind mobil, mind asztali gép esetén
+            canvas.addEventListener('click', handleCanvasInteraction);
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+            
+            // Alap érintés események kezelése
+            canvas.addEventListener('touchmove', function(e) {
+                if (Math.abs(e.touches[0].clientY - initialTouchY) < 10) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        function handleTouchStart(event) {
+            initialTouchY = event.touches[0].clientY;
+        }
+
+        function handleTouchEnd(event) {
+            if (event.changedTouches.length === 0) return;
+            
+            const touch = event.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;            
+        }
+
+        function resizeCanvas() {
+            const screenWidth = window.innerWidth;
+            isMobile = screenWidth <= 650;
+            
+            // Alapértelmezett desktop méret, de maximum a képernyő szélessége
+            canvasWidth = isMobile ? Math.min(screenWidth - 20, 650) : Math.min(650, screenWidth - 40);
+            
+            // Desktop és mobil esetén különböző méretű medencék
+            poolRadius = isMobile ? 
+                         (screenWidth < 400 ? 20 : 22) : 
+                         25; // Eredeti méret asztali gépen
+            
+            arrowLength = poolRadius * 1.4;
+            
+            // A medencék közötti távolság is adaptív
+            const gapSize = isMobile ? 
+                          Math.max(15, 30 * (screenWidth / 650)) : 
+                          30; // Eredeti távolság asztali gépen
+            
+            const poolDiameterWithGap = (poolRadius * 2) + gapSize;
+            canvasHeight = (numRows * poolDiameterWithGap) + 30;
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            createPoolsData();
+            drawPools();
+        }
+
+        function createPoolsData() {
+            poolsData = [];
+            const gapSize = isMobile ? 
+                          Math.max(15, 30 * (canvasWidth / 650)) : 
+                          30;
+            
+            const poolDiameterWithGap = (poolRadius * 2) + gapSize;
+            const startX = (canvasWidth - (numCols * poolDiameterWithGap - gapSize)) / 2 + poolRadius;
+            const startY = 25 + poolRadius;
+
+            for (let i = 0; i < numPools; i++) {
+                const row = Math.floor(i / numCols);
+                const col = i % numCols;
+                const x = startX + col * poolDiameterWithGap;
+                const y = startY + row * poolDiameterWithGap;
+                poolsData.push({ x, y, number: i + 1, contaminated: false, clean: false });
+            }
+        }
+
+        function drawPools() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Először rajzoljuk meg a nyilakat, hogy a medencék alá kerüljenek
+            poolsData.forEach((pool, index) => {
+                const row = Math.floor(index / numCols);
+                const col = index % numCols;
+
+                // Nyíl jobbra
+                if (col < numCols - 1) {
+                    const nextPool = poolsData[index + 1];
+                    const fromX = pool.x + poolRadius + 2;
+                    const toX = nextPool.x - poolRadius - 2;
+                    const midY = pool.y;
+                    
+                    // Mobilon is megjelenjenek a nyilak
+                    if (toX > fromX + 5) {
+                        drawArrow(fromX, midY, toX, midY);
+                    }
+                }
+
+                // Nyíl lefelé
+                if (row < numRows - 1) {
+                    const nextPool = poolsData[index + numCols];
+                    const fromY = pool.y + poolRadius + 2;
+                    const toY = nextPool.y - poolRadius - 2;
+                    const midX = pool.x;
+                    
+                    // Mobilon is megjelenjenek a nyilak
+                    if (toY > fromY + 5) {
+                        drawArrow(midX, fromY, midX, toY);
+                    }
+                }
+            });
+            
+            // Majd rajzoljuk meg a medencéket
+            poolsData.forEach((pool, index) => {
+                // Medence háttér
+                ctx.beginPath();
+                ctx.arc(pool.x, pool.y, poolRadius, 0, 2 * Math.PI);
+                if (pool.contaminated) {
+                    ctx.fillStyle = '#f44336'; // Piros a szennyezett medencéknek
+                } else if (pool.clean) {
+                    ctx.fillStyle = '#4caf50'; // Zöld a tiszta medencéknek
+                } else {
+                    ctx.fillStyle = '#add8e6'; // Világoskék az ismeretlen állapotú medencéknek
+                }
+                ctx.fill();
+                
+                // Medence szegélye
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#1e3a8a';
+                ctx.stroke();
+
+                // Medence száma - asztali gépen fix méret, mobilon adaptív
+                const fontSize = isMobile ? 
+                                 Math.max(12, Math.min(15, poolRadius * 0.6)) : 
+                                 15; // Eredeti betűméret asztali gépen
+                
+                ctx.fillStyle = '#000';
+                ctx.font = `${fontSize}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pool.number, pool.x, pool.y);
+            });
+        }
+
+        function drawArrow(fromX, fromY, toX, toY) {
+            // Mobilon javítva a nyilak megjelenítése
+            const headlen = isMobile ? Math.max(5, poolRadius * 0.3) : 10; // Mobilon kisebb nyílhegy
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const angle = Math.atan2(dy, dx);
+            const length = Math.sqrt(dx * dx + dy * dy);
+            
+            // Rövidebb nyíl mobilon, hogy biztosan legyen elég hely
+            const shortening = isMobile ? Math.min(3, length * 0.1) : Math.min(5, length * 0.1);
+            const actualToX = toX - shortening * Math.cos(angle);
+            const actualToY = toY - shortening * Math.sin(angle);
+            
+            // Nyíl testének vonalvastagsága mobilon kisebb
+            const lineWidth = isMobile ? Math.max(1, poolRadius * 0.05) : 2;
+            
+            // Nyíl teste
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(actualToX, actualToY);
+            ctx.strokeStyle = '#1e3a8a';
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+
+            // Nyílhegy - mobilon is jól látható
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(
+                toX - headlen * Math.cos(angle - Math.PI / 6),
+                toY - headlen * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                toX - headlen * Math.cos(angle + Math.PI / 6),
+                toY - headlen * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fill();
+        }
+
+        function isContaminatedHypothetically(sourceIndex, targetIndex) {
+            const sourceRow = Math.floor(sourceIndex / numCols);
+            const sourceCol = sourceIndex % numCols;
+            const targetRow = Math.floor(targetIndex / numCols);
+            const targetCol = targetIndex % numCols;
+            return targetRow >= sourceRow && targetCol >= sourceCol;
+        }
+
+        function handleCanvasInteraction(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            checkPoolInteraction(x, y);
+        }
+        
+        function checkPoolInteraction(x, y) {
+            poolsData.forEach((pool, index) => {
+                // Mobilon nagyobb érintési terület
+                const touchRadius = isMobile ? poolRadius * 1.2 : poolRadius;
+                const distance = Math.sqrt((x - pool.x) ** 2 + (y - pool.y) ** 2);
+                if (distance < touchRadius) {
+                    checkPollution(index);
+                }
+            });
+        }
+
+        function checkPollution(index) {
+            if (checkedPools[index] !== null) {
+                document.getElementById('message').textContent = `You've already checked this pool.`;
+                return;
+            }
+
+            let contaminatedCount = 0;
+            let notContaminatedCount = 0;
+            let contaminatedSources = [];
+            let notContaminatedSources = [];
+
+            potentialSources.forEach(source => {
+                if (isContaminatedHypothetically(source, index)) {
+                    contaminatedCount++;
+                    contaminatedSources.push(source);
+                } else {
+                    notContaminatedCount++;
+                    notContaminatedSources.push(source);
+                }
+            });
+
+            let isActuallyContaminated;
+            if (contaminatedCount > notContaminatedCount) {
+                isActuallyContaminated = true;
+                potentialSources = contaminatedSources;
+            } else if (notContaminatedCount > contaminatedCount) {
+                isActuallyContaminated = false;
+                potentialSources = notContaminatedSources;
+            } else {
+                isActuallyContaminated = Math.random() < 0.5;
+                potentialSources = isActuallyContaminated ? contaminatedSources : notContaminatedSources;
+            }
+
+            checkedPools[index] = isActuallyContaminated;
+            questionCount++;
+            document.getElementById('question-count').textContent = `Number of questions: ${questionCount}`;
+
+            poolsData[index].contaminated = isActuallyContaminated;
+            poolsData[index].clean = !isActuallyContaminated;
+
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = `Pool number ${index + 1} is ${isActuallyContaminated ? 'contaminated.' : 'clean.'}`;
+
+            drawPools();
+            updatePotentialSourcesDisplay();
+        }
+
+        function checkGuess() {
+            const guessInput = document.getElementById('guess');
+            const messageElement = document.getElementById('message');
+            const guessedSource = parseInt(guessInput.value) - 1;
+
+            if (isNaN(guessedSource) || guessedSource < 0 || guessedSource >= numPools) {
+                messageElement.textContent = "Pool number has to be between 1 and 15.";
+                return;
+            }
+
+            if (potentialSources.length === 1 && potentialSources[0] === guessedSource) {
+                messageElement.textContent = `Congratulations! Pool number ${guessedSource + 1} was the source of the contamination.`;
+                revealPollution(guessedSource);
+                
+                // Csak mobilon görgetünk automatikusan
+                if (isMobile) {
+                    canvas.scrollIntoView({behavior: "smooth", block: "center"});
+                }
+            } else {
+                let otherPotentialSource;
+                const otherPotentialSources = potentialSources.filter(s => s !== guessedSource);
+                if (otherPotentialSources.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * otherPotentialSources.length);
+                    otherPotentialSource = otherPotentialSources[randomIndex] + 1;
+                }
+                messageElement.textContent = `Sorry, your guess (${guessedSource + 1}) was incorrect — the source was pool number ${otherPotentialSource}.`;
+                
+                // Megmutatjuk a helyes választ
+                revealPollution(otherPotentialSources[0]);
+                
+                // Csak mobilon görgetünk automatikusan
+                if (isMobile) {
+                    canvas.scrollIntoView({behavior: "smooth", block: "center"});
+                }
+            }
+        }
+
+        function revealPollution(source) {
+            for (let i = 0; i < numPools; i++) {
+                if (isContaminatedHypothetically(source, i)) {
+                    poolsData[i].contaminated = true;
+                    poolsData[i].clean = false;
+                } else {
+                    poolsData[i].contaminated = false;
+                    poolsData[i].clean = true;
+                }
+            }
+            
+            // Kiemeljük a forrást
+            poolsData[source].contaminated = true;
+            poolsData[source].clean = false;
+            
+            drawPools();
+            
+            // Speciális kijelölés a forrásnak
+            ctx.beginPath();
+            ctx.arc(poolsData[source].x, poolsData[source].y, poolRadius + 3, 0, 2 * Math.PI);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ff9800';
+            ctx.stroke();
+            
+            // Második kijelölés
+            ctx.beginPath();
+            ctx.arc(poolsData[source].x, poolsData[source].y, poolRadius + 6, 0, 2 * Math.PI);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#ff9800';
+            ctx.stroke();
+        }
+
+        function updatePotentialSourcesDisplay() {
+            // console.log("Lehetséges források:", potentialSources.map(s => s + 1));
+        }
+
+        function resetGame() {
+            // Alaphelyzetbe állítjuk a játékot
+            potentialSources = Array.from({ length: numPools }, (_, i) => i);
+            questionCount = 0;
+            checkedPools = new Array(numPools).fill(null);
+            document.getElementById('question-count').textContent = `Number of questions: ${questionCount}`;
+            document.getElementById('message').textContent = "";
+            document.getElementById('guess').value = "";
+            
+            // Alaphelyzetbe állítjuk a medencéket
+            poolsData.forEach(pool => {
+                pool.contaminated = false;
+                pool.clean = false;
+            });
+            
+            drawPools();
+        }
+
+        // Átméretezésnél újrarajzolás és a mobilos állapot frissítése
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+        });
+        
+        // Enter billentyű támogatása a tippeléshez
+        document.getElementById('guess').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+        
+        // Oldal betöltésekor inicializálás
+        window.addEventListener('load', () => {
+            initCanvas();
+            drawPools();
+        });
+    </script>
+
+</body>
+</html>
