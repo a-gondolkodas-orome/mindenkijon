@@ -456,7 +456,7 @@
                     document.body.removeChild(changeInfo);
 
                     // Timestamp hozzáadása a fájlnévhez
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const timestamp = new Date().toString().replace(/[:.]/g, '-');
                     const fileName = `hatszog_szimmetria_megoldas_${timestamp}.png`;
 
                     canvas.toBlob(blob => {
