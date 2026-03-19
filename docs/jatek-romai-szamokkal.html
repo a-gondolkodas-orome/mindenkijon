@@ -48,11 +48,25 @@
             background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
             border: 1px solid #fecaca;
         }
+        .lang-switch {
+            transition: all 0.2s;
+        }
+        .lang-switch:hover {
+            background-color: #f1f5f9;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
 
 <div class="canvas-card w-full max-w-2xl p-6 md:p-10">
+
+    <!-- Language switcher -->
+    <div class="flex justify-end mb-4">
+        <a id="lang-switch-link" href="#" class="lang-switch px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-200 text-slate-500 flex items-center gap-1.5">
+            <span id="lang-switch-flag"></span>
+            <span id="lang-switch-label"></span>
+        </a>
+    </div>
 
     <header class="text-center mb-10">
         <h1 id="title" class="text-3xl font-extrabold text-slate-800 mb-3"></h1>
@@ -103,7 +117,13 @@
 </div>
 
 <script>
-    const STRINGS = {
+    const params = new URLSearchParams(window.location.search);
+    const langParam = params.get('lang');
+    const LANG = (langParam === 'en') ? 'en' : 'hu';
+
+    document.documentElement.lang = LANG;
+
+    const STRINGS_HU = {
         pageTitle:      "Játék római számokkal",
         subtitle:       'Egészítsd ki a számot úgy, hogy római szám maradjon (max. <span class="font-bold text-slate-700">2999</span>).<br class="hidden sm:block"> Az veszít, aki <span class="font-bold text-blue-600">nem tud lépni</span>!',
         scoreLabel:     "Aktuális szám",
@@ -118,7 +138,32 @@
         endLoss:        "Mi nyertünk.",
         newGame:        "Új játék",
         resetLink:      "Újrakezdés",
+        langSwitchFlag: "🇬🇧",
+        langSwitchLabel:"English",
+        langSwitchHref: "?lang=en",
     };
+
+    const STRINGS_EN = {
+        pageTitle:      "Roman Numeral Builder Game",
+        subtitle:       'Extend the number so it stays a valid Roman numeral (max. <span class="font-bold text-slate-700">2999</span>).<br class="hidden sm:block"> The player who <span class="font-bold text-blue-600">cannot move</span> loses!',
+        scoreLabel:     "Current number",
+        starterLabel:   "Who goes first?",
+        btnPlayerStart: "I'll go first",
+        btnCpuStart:    "Let you start",
+        statusPlayer:   "Your turn!",
+        statusCpu:      "Thinking...",
+        statusGameOver: "Game over",
+        statusWaiting:  "Choose who goes first!",
+        endWin:         "Congratulations, you won! 🎉",
+        endLoss:        "We wins.",
+        newGame:        "New game",
+        resetLink:      "Start over",
+        langSwitchFlag: "🇭🇺",
+        langSwitchLabel:"Magyar",
+        langSwitchHref: "?lang=hu",
+    };
+
+    const STRINGS = LANG === 'en' ? STRINGS_EN : STRINGS_HU;
 
     const ROMAN_CHARS = ['I', 'V', 'X', 'L', 'C', 'D', 'M'];
     let currentString = "";
@@ -128,15 +173,19 @@
 
     function applyStaticStrings() {
         document.title = STRINGS.pageTitle;
-        document.getElementById('title').innerHTML           = STRINGS.pageTitle;
-        document.getElementById('subtitle').innerHTML        = STRINGS.subtitle;
-        document.getElementById('score-label').innerText     = STRINGS.scoreLabel;
-        document.getElementById('starter-label').innerText   = STRINGS.starterLabel;
+        document.getElementById('title').innerHTML            = STRINGS.pageTitle;
+        document.getElementById('subtitle').innerHTML         = STRINGS.subtitle;
+        document.getElementById('score-label').innerText      = STRINGS.scoreLabel;
+        document.getElementById('starter-label').innerText    = STRINGS.starterLabel;
         document.getElementById('btn-player-start').innerText = STRINGS.btnPlayerStart;
-        document.getElementById('btn-cpu-start').innerText   = STRINGS.btnCpuStart;
-        document.getElementById('new-game-btn').innerText    = STRINGS.newGame;
-        document.getElementById('reset-link').innerText      = STRINGS.resetLink;
-        document.getElementById('status-pill').innerText     = STRINGS.statusWaiting;
+        document.getElementById('btn-cpu-start').innerText    = STRINGS.btnCpuStart;
+        document.getElementById('new-game-btn').innerText     = STRINGS.newGame;
+        document.getElementById('reset-link').innerText       = STRINGS.resetLink;
+        document.getElementById('status-pill').innerText      = STRINGS.statusWaiting;
+
+        document.getElementById('lang-switch-flag').innerText  = STRINGS.langSwitchFlag;
+        document.getElementById('lang-switch-label').innerText = STRINGS.langSwitchLabel;
+        document.getElementById('lang-switch-link').href       = STRINGS.langSwitchHref;
     }
 
     function romanToDecimal(str) {
@@ -196,13 +245,14 @@
         gameActive = true;
         memo.clear();
 
-        // Hide the starter area after selection
         document.getElementById('starter-area').classList.add('hidden');
-
         document.getElementById('alert').classList.add('hidden');
         document.getElementById('button-grid').classList.remove('hidden');
         document.getElementById('reset-link').classList.remove('invisible');
         document.getElementById('roman-display').textContent = '—';
+        const lsl = document.getElementById('lang-switch-link');
+        lsl.style.pointerEvents = 'none';
+        lsl.style.opacity = '0.35';
 
         updateUI();
         if (!isPlayerTurn) setTimeout(aiMove, 600);
@@ -287,10 +337,12 @@
         currentString = "";
         gameActive = false;
 
-        // Show starter area again on reset
         document.getElementById('starter-area').classList.remove('hidden');
         document.getElementById('btn-player-start').classList.remove('selected');
         document.getElementById('btn-cpu-start').classList.remove('selected');
+        const lsl = document.getElementById('lang-switch-link');
+        lsl.style.pointerEvents = '';
+        lsl.style.opacity = '';
 
         for (const char of ROMAN_CHARS) {
             const btn = document.getElementById('btn-' + char);
