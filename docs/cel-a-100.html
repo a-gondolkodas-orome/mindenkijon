@@ -79,19 +79,14 @@
 
 <div class="canvas-card w-full max-w-2xl p-6 md:p-10">
     <header class="text-center mb-10">
-        <h1 class="text-3xl font-extrabold text-slate-800 mb-3">Győzz le minket!</h1>
-        <p class="text-slate-500 text-sm md:text-base leading-relaxed">
-            Érd el pontosan a <span class="font-bold text-slate-700">100</span>-at! <br class="hidden sm:block">
-            Válassz egy számot <span class="font-bold text-blue-600">3 és 10</span> között.
-        </p>
+        <h1 id="title" class="text-3xl font-extrabold text-slate-800 mb-3"></h1>
+        <p id="subtitle" class="text-slate-500 text-sm md:text-base leading-relaxed"></p>
     </header>
 
     <div class="flex flex-wrap justify-between items-end mb-8 gap-4">
-        <div id="status-pill" class="px-4 py-1.5 rounded-full text-sm font-medium bg-blue-50 text-blue-600 border border-blue-100">
-            Te jössz!
-        </div>
+        <div id="status-pill" class="px-4 py-1.5 rounded-full text-sm font-medium bg-blue-50 text-blue-600 border border-blue-100"></div>
         <div class="text-right">
-            <span class="text-slate-400 text-xs uppercase tracking-wider font-bold">Aktuális állás</span>
+            <span id="score-label" class="text-slate-400 text-xs uppercase tracking-wider font-bold"></span>
             <div id="score-text" class="text-4xl font-black text-slate-700">0</div>
         </div>
     </div>
@@ -100,17 +95,10 @@
         <div class="number-line">
             <div id="progress" class="absolute h-full bg-blue-400 rounded-l-4 transition-all duration-500" style="width: 0%"></div>
             <div id="marker" class="marker" style="left: 0%">
-                <div class="pawn">👤</div>
+                <div class="pawn" id="pawn-emoji"></div>
                 <span id="marker-val">0</span>
             </div>
-            
-            <div class="absolute w-full flex justify-between -bottom-8 px-0 text-[10px] font-bold text-slate-400">
-                <span>0</span>
-                <span>25</span>
-                <span>50</span>
-                <span>75</span>
-                <span>100</span>
-            </div>
+            <div id="number-line-labels" class="absolute w-full flex justify-between -bottom-8 px-0 text-[10px] font-bold text-slate-400"></div>
         </div>
     </div>
 
@@ -120,35 +108,66 @@
 
     <div id="alert" class="hidden mb-8 p-6 rounded-xl text-center animate-in fade-in zoom-in duration-300">
         <p id="alert-text" class="font-bold text-lg mb-4"></p>
-        <button onclick="resetGame()" class="px-8 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg font-semibold hover:bg-slate-50 transition-colors shadow-sm">
-            Új játék
-        </button>
+        <button onclick="resetGame()" id="new-game-btn" class="px-8 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg font-semibold hover:bg-slate-50 transition-colors shadow-sm"></button>
     </div>
 
     <div class="flex justify-center border-t border-slate-100 pt-8">
-        <button id="reset-link" onclick="resetGame()" class="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors">
-            Játék alaphelyzetbe
-        </button>
+        <button id="reset-link" onclick="resetGame()" class="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors"></button>
     </div>
 </div>
 
 <script>
+    // ─── Összes szöveg egy helyen ────────────────────────────────────────────────
+    const STRINGS = {
+        pageTitle:      "Cél a 100!",
+        subtitle:       'Érd el pontosan a <span class="font-bold text-slate-700">100</span>-at! <br class="hidden sm:block"> Válassz egy számot <span class="font-bold text-blue-600">3</span> és <span class="font-bold text-blue-600">10</span> között.',
+        scoreLabel:     "Aktuális helyzet",
+        pawnEmoji:      "👤",
+        numberLineLabels: ["0", "25", "50", "75", "100"],
+        statusPlayer:   "Te jössz!",
+        statusCpu:      "Gondolkodunk...",
+        statusGameOver: "Játék vége",
+        endWin:         "Gratulálunk, győztél! 🎉",
+        endLoss:        "Mi nyertünk.",
+        endDraw:        "Döntetlen! Senki sem tud pontosan 100-ra lépni.",
+        newGame:        "Új játék",
+        resetLink:      "Újrakezdés",
+    };
+    // ────────────────────────────────────────────────────────────────────────────
+
     const CONFIG = { target: 100, min: 3, max: 10 };
     let state = { score: 0, player: 1, active: true };
 
     const elements = {
-        grid: document.getElementById('button-grid'),
-        score: document.getElementById('score-text'),
-        marker: document.getElementById('marker'),
-        markerVal: document.getElementById('marker-val'),
-        progress: document.getElementById('progress'),
-        status: document.getElementById('status-pill'),
-        alert: document.getElementById('alert'),
-        alertText: document.getElementById('alert-text'),
-        resetLink: document.getElementById('reset-link')
+        grid:       document.getElementById('button-grid'),
+        score:      document.getElementById('score-text'),
+        marker:     document.getElementById('marker'),
+        markerVal:  document.getElementById('marker-val'),
+        progress:   document.getElementById('progress'),
+        status:     document.getElementById('status-pill'),
+        alert:      document.getElementById('alert'),
+        alertText:  document.getElementById('alert-text'),
+        resetLink:  document.getElementById('reset-link')
     };
 
+    function applyStaticStrings() {
+        document.title                                      = STRINGS.pageTitle;
+        document.getElementById('title').innerText         = STRINGS.pageTitle;
+        document.getElementById('subtitle').innerHTML      = STRINGS.subtitle;
+        document.getElementById('score-label').innerText   = STRINGS.scoreLabel;
+        document.getElementById('pawn-emoji').innerText    = STRINGS.pawnEmoji;
+        document.getElementById('new-game-btn').innerText  = STRINGS.newGame;
+        elements.resetLink.innerText                       = STRINGS.resetLink;
+        elements.status.innerText                          = STRINGS.statusPlayer;
+
+        const labelsContainer = document.getElementById('number-line-labels');
+        labelsContainer.innerHTML = STRINGS.numberLineLabels
+            .map(l => `<span>${l}</span>`)
+            .join('');
+    }
+
     function init() {
+        applyStaticStrings();
         elements.grid.innerHTML = '';
         for (let i = CONFIG.min; i <= CONFIG.max; i++) {
             const btn = document.createElement('button');
@@ -173,26 +192,28 @@
         for (let i = CONFIG.min; i <= CONFIG.max; i++) {
             const btn = document.getElementById(`btn-${i}`);
             const targetSpan = document.getElementById(`target-${i}`);
-            
+
             if (btn) {
                 const nextScore = state.score + i;
                 const isPossible = nextScore <= CONFIG.target;
                 btn.disabled = !state.active || !isPossible;
                 if (isPossible) availableMoves++;
-                
                 if (targetSpan) targetSpan.innerText = nextScore;
             }
         }
 
-        // Handle draw situation if no one can reach 100 exactly
         if (state.active && availableMoves === 0 && state.score < CONFIG.target) {
-            showEnd("Döntetlen! Senki sem tud pontosan 100-ra lépni.", "draw");
+            showEnd(STRINGS.endDraw, "draw");
             return;
         }
 
         if (state.active) {
-            elements.status.innerText = state.player === 1 ? 'Te jössz!' : 'Gondolkodunk...';
-            elements.status.className = `px-4 py-1.5 rounded-full text-sm font-medium ${state.player === 1 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse'}`;
+            elements.status.innerText = state.player === 1 ? STRINGS.statusPlayer : STRINGS.statusCpu;
+            elements.status.className = `px-4 py-1.5 rounded-full text-sm font-medium ${
+                state.player === 1
+                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                    : 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse'
+            }`;
         }
     }
 
@@ -200,9 +221,12 @@
         if (!state.active) return;
 
         state.score += step;
-        
+
         if (state.score === CONFIG.target) {
-            showEnd(state.player === 1 ? "Gratulálok, győztél! 🎉" : "Sajnálom, most a gép nyert.", state.player === 1 ? "win" : "loss");
+            showEnd(
+                state.player === 1 ? STRINGS.endWin : STRINGS.endLoss,
+                state.player === 1 ? "win" : "loss"
+            );
             return;
         }
 
@@ -217,8 +241,8 @@
 
     function cpuThink() {
         const diff = CONFIG.min + CONFIG.max;
-        const remainder = CONFIG.target % diff; 
-        
+        const remainder = CONFIG.target % diff;
+
         let move = -1;
         for (let s = CONFIG.min; s <= CONFIG.max; s++) {
             if ((state.score + s) % diff === remainder) { move = s; break; }
@@ -237,23 +261,23 @@
         if (move !== -1) {
             handleMove(move);
         } else {
-            updateUI(); 
+            updateUI();
         }
     }
 
     function showEnd(msg, type) {
         state.active = false;
         updateUI();
-        elements.status.innerText = "Játék vége";
+        elements.status.innerText = STRINGS.statusGameOver;
         elements.status.className = "px-4 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-400 border border-slate-200";
-        
+
         elements.alertText.innerText = msg;
         elements.alert.classList.remove('hidden');
-        
+
         let gradientClass = 'draw-gradient';
         if (type === 'win') gradientClass = 'win-gradient';
         if (type === 'loss') gradientClass = 'loss-gradient';
-        
+
         elements.alert.className = `p-8 rounded-2xl text-center mb-8 ${gradientClass}`;
         elements.grid.classList.add('hidden');
         elements.resetLink.classList.add('invisible');
