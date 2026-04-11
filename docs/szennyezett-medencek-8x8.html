@@ -295,6 +295,26 @@ function decidePollution(poolIdx) {
     return Math.random() < 0.5;
   }
 
+  // Új stratégia: ha 8-nál kevesebb tipp volt és legalább 5 átlós mező már ki van zárva (tiszták)
+  // Az átló a jobb felső (0, 7) és bal alsó (7, 0) közötti mezőket jelenti (row + col = 7)
+  if (questionCount < 8) {
+    const diagonalIndices = poolsData
+      .filter(p => p.row + p.col === 7)
+      .map(p => poolsData.indexOf(p));
+    
+    const excludedDiagonalCount = diagonalIndices.filter(idx => poolsData[idx].clean).length;
+
+    if (excludedDiagonalCount >= 5) {
+      // Elemzés: melyik válasz hagy meg több lehetséges forrást?
+      // (Az AI "gonosz" akar lenni, tehát a nagyobb halmazt tartja meg)
+      if (contamSrcs.length > cleanSrcs.length) {
+          return true; // Szennyezett legyen
+      } else {
+          return false; // Tiszta legyen
+      }
+    }
+  }
+
   if (cleanSrcs.length === 0) return true;
   return false;
 }
