@@ -96,7 +96,7 @@ const STRINGS_HU = {
   submitButton: 'Tippelés',
   testsUsed: (n) => `Feltett kérdések száma: ${n}`,
   footer: 'További feladatok: <a href="https://www.mindenkijon.hu/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">minden·ki·jön</a>',
-  alreadyTested: () => `Erre a medencére már rákérdeztél.`,
+  alreadyTested: (n) => `Erre a medencére már rákérdeztél.`,
   resultContaminated: (n) => `A(z) ${n}. medence szennyezett.`,
   resultClean: (n) => `A(z) ${n}. medence tiszta.`,
   guessOutOfRange: 'Kérlek, érvényes medence számot adj meg (1–36).',
@@ -177,15 +177,21 @@ function initState() {
 initState();
 
 let canvas, ctx, poolRadius, canvasWidth, canvasHeight, isMobile;
+let lastTouchEnd = 0;
 
 function initCanvas() {
   canvas = document.getElementById('pools-canvas');
   ctx = canvas.getContext('2d');
   resizeCanvas();
   canvas.addEventListener('click', handleCanvasClick);
+
   let initialTouchY;
-  canvas.addEventListener('touchstart', e => { initialTouchY = e.touches[0].clientY; }, { passive: true });
+  canvas.addEventListener('touchstart', e => {
+    initialTouchY = e.touches[0].clientY;
+  }, { passive: true });
+
   canvas.addEventListener('touchend', e => {
+    lastTouchEnd = Date.now();
     if (!e.changedTouches.length) return;
     const touch = e.changedTouches[0];
     const rect = canvas.getBoundingClientRect();
@@ -295,22 +301,18 @@ function decidePollution(poolIdx) {
     return Math.random() < 0.5;
   }
 
-  // Új stratégia: ha 8-nál kevesebb tipp volt és legalább 5 átlós mező már ki van zárva (tiszták)
-  // Az átló a jobb felső (0, 7) és bal alsó (7, 0) közötti mezőket jelenti (row + col = 7)
   if (questionCount < 8) {
     const diagonalIndices = poolsData
       .filter(p => p.row + p.col === 7)
       .map(p => poolsData.indexOf(p));
-    
+
     const excludedDiagonalCount = diagonalIndices.filter(idx => poolsData[idx].clean).length;
 
     if (excludedDiagonalCount >= 5) {
-      // Elemzés: melyik válasz hagy meg több lehetséges forrást?
-      // (Az AI "gonosz" akar lenni, tehát a nagyobb halmazt tartja meg)
       if (contamSrcs.length > cleanSrcs.length) {
-          return true; // Szennyezett legyen
+          return true;
       } else {
-          return false; // Tiszta legyen
+          return false;
       }
     }
   }
@@ -349,6 +351,7 @@ function checkPollution(poolIdx) {
 }
 
 function handleCanvasClick(e) {
+  if (Date.now() - lastTouchEnd < 500) return;
   const rect = canvas.getBoundingClientRect();
   const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
   checkPoolAt((e.clientX - rect.left) * sx, (e.clientY - rect.top) * sy);
