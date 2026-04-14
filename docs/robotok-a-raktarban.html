@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raktárautomatizálás - Interaktív Robot</title>
+    <title>Raktárautomatizálás - Rejtett Stratégia</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #f0f4f8; font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; touch-action: manipulation; overflow-x: hidden; }
@@ -15,10 +15,8 @@
         .section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.125rem 1.25rem; margin-bottom: 1rem; }
         .section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.75rem; }
         
-        .possible-text { font-size: 0.9rem; color: #334155; line-height: 1.7; text-align: center; }
-        .possible-text .val { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; padding: 1px 7px; font-size: 0.8rem; font-weight: 700; margin: 1px 2px; }
-        .possible-text .val.lone { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-        .possible-text .elim { display: inline-block; color: #94a3b8; text-decoration: line-through; font-size: 0.8rem; margin: 1px 2px; }
+        /* A lehetséges méretek listája elrejtve a nehezítés érdekében */
+        .hidden-strategy { font-style: italic; color: #64748b; text-align: center; font-size: 0.9rem; }
         
         .interactive-area {
             position: relative;
@@ -62,7 +60,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
-        /* Robotkar stílusa */
         .robot-container {
             position: absolute;
             bottom: -150px;
@@ -148,7 +145,6 @@
         .guess-input { flex: 1; padding: 0.7rem; border: 1px solid #cbd5e1; border-radius: 0.6rem; font-weight: 700; text-align: center; }
         .guess-btn { background: white; border: 1px solid #cbd5e1; padding: 0.7rem 1.5rem; border-radius: 0.6rem; font-weight: 700; cursor: pointer; }
 
-        /* Doboz felemelt állapota */
         .box-lifting { transform: translateY(-40px) scale(1.05); box-shadow: 0 20px 30px rgba(0,0,0,0.15); }
     </style>
 </head>
@@ -157,24 +153,17 @@
 <div class="page">
     <div class="main-card">
         <h1>Raktárautomatizálás</h1>
-        <p class="subtitle">Méretezd a dobozt, majd figyeld a robot munkáját! <br>Találd meg a pontos méretet a legkevesebb próbából.</p>
+        <p class="subtitle">A robot szigorúan titkos rekeszmérethez igazodik. <br>Találd meg a pontos méretet! Vigyázz, a robot okos!</p>
+        <div class="hidden-strategy" id="status-text">
+        </div>
 
         <div class="topbar">
             <span class="pill" id="counter">Próbák: 0</span>
-            <button class="restart-btn" onclick="resetGame()">↺ Reset</button>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Lehetséges rekeszméretek</div>
-            <div class="possible-text">
-                <span id="w-possibilities"></span>
-                <span style="margin: 0 10px; color:#cbd5e1; font-weight: bold;">×</span>
-                <span id="h-possibilities"></span>
-            </div>
+            <button class="restart-btn" onclick="resetGame()">↺ Új játék</button>
         </div>
 
         <div class="interactive-area" id="container">
-            <div class="shelf-bg" id="shelf-vis">FIX REKESZ (80×50)</div>
+            <div class="shelf-bg" id="shelf-vis">MAX REKESZ (80×50)</div>
             
             <div class="resizable-box" id="box">
                 <div class="dim-label label-w" id="label-w-container"><span id="display-w">55</span> cm</div>
@@ -184,14 +173,13 @@
                 <div class="handle handle-rb" data-axis="both"></div>
             </div>
 
-            <!-- Robotkar Vizualizáció -->
             <div class="robot-container" id="robot">
-                <div class="robot-status" id="robot-status">Ellenőrzés...</div>
+                <div class="robot-status" id="robot-status">Vizsgálat...</div>
                 <svg class="robot-arm" viewBox="0 0 100 120">
-                    <rect x="35" y="100" width="30" height="20" rx="2" /> <!-- Base -->
-                    <rect x="45" y="40" width="10" height="65" rx="5" /> <!-- Main Arm -->
-                    <circle cx="50" cy="40" r="8" fill="#1e293b" /> <!-- Joint -->
-                    <path d="M40,30 L60,30 L60,10 L55,10 L55,25 L45,25 L45,10 L40,10 Z" fill="#334155" /> <!-- Gripper -->
+                    <rect x="35" y="100" width="30" height="20" rx="2" />
+                    <rect x="45" y="40" width="10" height="65" rx="5" />
+                    <circle cx="50" cy="40" r="8" fill="#1e293b" />
+                    <path d="M40,30 L60,30 L60,10 L55,10 L55,25 L45,25 L45,10 L40,10 Z" fill="#334155" />
                 </svg>
             </div>
         </div>
@@ -201,19 +189,19 @@
         <div class="msg-wrap"><span class="msg" id="result-msg"></span></div>
 
         <div class="section" id="history-section" style="display:none">
-            <div class="section-title">Korábbi próbák</div>
+            <div class="section-title">Mérési napló</div>
             <table class="history-table">
-                <thead><tr><th>#</th><th>Méret</th><th>Eredmény</th></tr></thead>
+                <thead><tr><th>#</th><th>Próbált méret</th><th>Eredmény</th></tr></thead>
                 <tbody id="history-body"></tbody>
             </table>
         </div>
 
         <div class="section">
-            <div class="section-title">Végső tipp</div>
+            <div class="section-title">Végső megoldás</div>
             <div class="guess-row">
-                <input type="number" class="guess-input" id="guess-w" placeholder="W">
-                <input type="number" class="guess-input" id="guess-h" placeholder="H">
-                <button class="guess-btn" onclick="submitGuess()">Beküldés</button>
+                <input type="number" class="guess-input" id="guess-w" placeholder="Szél.">
+                <input type="number" class="guess-input" id="guess-h" placeholder="Mag.">
+                <button class="guess-btn" onclick="submitGuess()">Tipp</button>
             </div>
             <div class="msg-wrap"><span class="msg" id="guess-out"></span></div>
         </div>
@@ -221,25 +209,31 @@
 </div>
 
 <script>
+    // A robot ezek közül a méretek közül "válogat" dinamikusan
     const WIDTHS = [40, 50, 60, 70, 80];
     const HEIGHTS = [30, 40, 50];
-    const MAX_W = 80;
-    const MAX_H = 50;
     const SCALE = 4;
 
-    let possibleW, possibleH, tries, historyData, isAnimating = false;
+    let possiblePairs = []; 
+    let tries, historyData, isAnimating = false;
     let currentW = 55;
     let currentH = 35;
 
     const boxEl = document.getElementById('box');
-    const shelfEl = document.getElementById('shelf-vis');
     const robotEl = document.getElementById('robot');
     const robotStatus = document.getElementById('robot-status');
     const sendBtn = document.getElementById('send-btn');
+    const statusText = document.getElementById('status-text');
 
     function resetGame() {
-        possibleW = [...WIDTHS];
-        possibleH = [...HEIGHTS];
+        // Kezdetben minden kombináció lehetséges
+        possiblePairs = [];
+        for (let w of WIDTHS) {
+            for (let h of HEIGHTS) {
+                possiblePairs.push({ w, h });
+            }
+        }
+        
         tries = 0;
         historyData = [];
         currentW = 55;
@@ -250,23 +244,11 @@
         document.getElementById('history-section').style.display = 'none';
         document.getElementById('history-body').innerHTML = '';
         document.getElementById('send-btn').disabled = false;
+        statusText.textContent = "Egy rekesz lehetséges szélessége: 40, 50, 60, 70, 80; magassága: 30, 40, 50.";
         hideMsg('result-msg');
         hideMsg('guess-out');
         
-        shelfEl.style.width = (MAX_W * SCALE) + 'px';
-        shelfEl.style.height = (MAX_H * SCALE) + 'px';
-        
-        renderPossible();
         updateBoxUI();
-    }
-
-    function renderPossible() {
-        document.getElementById('w-possibilities').innerHTML = WIDTHS.map(w => 
-            `<span class="${!possibleW.includes(w) ? 'elim' : 'val' + (possibleW.length===1?' lone':'')}">${w}</span>`
-        ).join('');
-        document.getElementById('h-possibilities').innerHTML = HEIGHTS.map(h => 
-            `<span class="${!possibleH.includes(h) ? 'elim' : 'val' + (possibleH.length===1?' lone':'')}">${h}</span>`
-        ).join('');
     }
 
     function updateBoxUI() {
@@ -276,105 +258,109 @@
         document.getElementById('display-w').textContent = currentW;
         document.getElementById('display-h').textContent = currentH;
         
-        const fits = possibleW.some(sw => currentW <= sw) && possibleH.some(sh => currentH <= sh);
-        boxEl.style.background = fits ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)';
-        boxEl.style.borderColor = fits ? '#22c55e' : '#ef4444';
+        // Vizuális visszajelzés a doboz állapotáról (semleges kék, mivel nem tudjuk mi a cél)
+        boxEl.style.background = 'rgba(37, 99, 235, 0.08)';
+        boxEl.style.borderColor = '#2563eb';
     }
 
-    // Robot Animáció folyamata
     async function startRobotAnimation() {
         if (isAnimating) return;
         isAnimating = true;
         sendBtn.disabled = true;
         hideMsg('result-msg');
 
-        // 1. Robot megjelenik
         robotEl.classList.add('active');
-        await wait(500);
+        await wait(400);
 
-        // 2. Doboz felemelése
-        robotStatus.textContent = "Doboz felemelése...";
+        robotStatus.textContent = "Elemzés...";
         robotStatus.classList.add('show');
         boxEl.classList.add('box-lifting');
-        await wait(800);
+        await wait(1200);
 
-        // 3. Vizsgálat
-        robotStatus.textContent = "Méret ellenőrzése...";
-        await wait(1000);
-
-        // 4. Eredmény feldolgozása
-        const result = processLogic();
+        // Strategiai döntéshozatal
+        const result = processAdversarialLogic();
         
-        // 5. Animált visszajelzés
         robotStatus.textContent = result.fits ? "Befért! ✅" : "Túl nagy! ❌";
         boxEl.classList.remove('box-lifting');
         
         if (result.fits) {
-            boxEl.style.opacity = "0.5";
-            boxEl.style.transform = "scale(0.9)";
+            boxEl.style.transform = "scale(0.95) translateY(-5px)";
         } else {
-            boxEl.style.transform = "translateX(20px) rotate(5deg)";
+            boxEl.style.transform = "translateX(15px) rotate(3deg)";
         }
 
         await wait(1000);
 
-        // 6. Takarítás
         robotEl.classList.remove('active');
         robotStatus.classList.remove('show');
         
-        // Eredmény megjelenítése UI-on
         showResultUI(result);
         
-        await wait(500);
-        boxEl.style.opacity = "1";
+        await wait(400);
         boxEl.style.transform = "none";
         isAnimating = false;
         sendBtn.disabled = false;
         updateBoxUI();
     }
 
-    function processLogic() {
+    function processAdversarialLogic() {
         const bw = currentW;
         const bh = currentH;
-        const wFit = possibleW.filter(sw => bw <= sw);
-        const hFit = possibleH.filter(sh => bh <= sh);
-        const fitCombos = wFit.length * hFit.length;
-        const totalCombos = possibleW.length * possibleH.length;
+
+        const ifFits = possiblePairs.filter(p => p.w >= bw && p.h >= bh);
         
-        let fits = fitCombos > 0 && (fitCombos < (totalCombos - fitCombos));
-        if (fitCombos === 0) fits = false;
-        if (fitCombos === totalCombos) fits = true;
+        const ifNotFits = possiblePairs.filter(p => p.w < bw || p.h < bh);
 
-        const oldW = [...possibleW];
-        const oldH = [...possibleH];
-
-        if (fits) {
-            possibleW = wFit;
-            possibleH = hFit;
+        let fits;
+        if (ifFits.length >= ifNotFits.length && ifFits.length > 0) {
+            fits = true;
+            possiblePairs = ifFits;
+        } else if (ifNotFits.length > 0) {
+            fits = false;
+            possiblePairs = ifNotFits;
         } else {
-            possibleW = possibleW.filter(sw => possibleH.some(sh => !(sw >= bw && sh >= bh)));
-            possibleH = possibleH.filter(sh => oldW.some(sw => !(sw >= bw && sh >= bh)));
+            fits = true;
+            possiblePairs = ifFits;
         }
 
         tries++;
+        
         return { bw, bh, fits };
     }
 
     function showResultUI(res) {
         document.getElementById('counter').textContent = 'Próbák: ' + tries;
         addHistory(res.bw, res.bh, res.fits);
-        renderPossible();
 
-        let txt = res.fits ? `Siker! A doboz (${res.bw}×${res.bh}) befért.` : `Hiba! A doboz (${res.bw}×${res.bh}) nem fért be.`;
-        if (possibleW.length === 1 && possibleH.length === 1) {
-            txt = `Megvan! A pontos méret: ${possibleW[0]}×${possibleH[0]} cm.`;
-        }
+        let txt = res.fits ? `A robot visszajelzése: A doboz (${res.bw}×${res.bh}) BEFÉR.` : `A robot visszajelzése: A doboz (${res.bw}×${res.bh}) NEM FÉR BE.`;
         showMsg('result-msg', txt, res.fits ? 'fit' : 'nofit');
+    }
+
+    function addHistory(bw, bh, fits) {
+        document.getElementById('history-section').style.display = 'block';
+        const tbody = document.getElementById('history-body');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${tries}</td><td><strong>${bw} × ${bh}</strong></td><td><span class="badge ${fits?'fit':'nofit'}">${fits?'SIKER':'HIBA'}</span></td>`;
+        tbody.prepend(tr);
+        historyData.push({bw, bh, fits});
+    }
+
+    function submitGuess() {
+        const gw = parseInt(document.getElementById('guess-w').value);
+        const gh = parseInt(document.getElementById('guess-h').value);
+        if (!gw || !gh) return;
+
+        const isActuallyFound = possiblePairs.length === 1 && possiblePairs[0].w === gw && possiblePairs[0].h === gh;
+        
+        if (isActuallyFound) {
+            showMsg('guess-out', `Kiváló! Kicselezted a robotot! A rekesz valóban ${gw}×${gh} cm.`, 'fit');
+        } else {
+            showMsg('guess-out', "A robot szerint ez nem a helyes méret. Próbálkozz még!", "nofit");
+        }
     }
 
     function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // Méretezés logika (maradt a korábbi, de az animáció alatt tiltva)
     let isResizing = false;
     let currentAxis = null;
     let startX, startY, startW, startH;
@@ -415,23 +401,6 @@
     window.addEventListener('touchmove', doResize, {passive: false});
     window.addEventListener('mouseup', () => isResizing = false);
     window.addEventListener('touchend', () => isResizing = false);
-
-    function addHistory(bw, bh, fits) {
-        document.getElementById('history-section').style.display = 'block';
-        const tbody = document.getElementById('history-body');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${historyData.length + 1}</td><td><strong>${bw}×${bh}</strong></td><td><span class="badge ${fits?'fit':'nofit'}">${fits?'OK':'NEM'}</span></td>`;
-        tbody.prepend(tr);
-        historyData.push({bw, bh, fits});
-    }
-
-    function submitGuess() {
-        const gw = parseInt(document.getElementById('guess-w').value);
-        const gh = parseInt(document.getElementById('guess-h').value);
-        if (!gw || !gh) return;
-        const isCorrect = possibleW.length === 1 && possibleH.length === 1 && gw === possibleW[0] && gh === possibleH[0];
-        showMsg('guess-out', isCorrect ? "Gratulálok! Eltaláltad!" : "Sajnos ez nem a helyes méret.", isCorrect ? 'fit' : 'nofit');
-    }
 
     function showMsg(id, text, type) {
         const el = document.getElementById(id);
