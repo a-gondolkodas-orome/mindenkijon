@@ -29,8 +29,6 @@
             overflow: hidden;
         }
 
-        .shelf-bg { display: none; }
-
         .resizable-box {
             position: relative;
             z-index: 10;
@@ -43,33 +41,14 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
-        /* Interaktív szegélyek a pöttyök helyett */
         .handle {
             position: absolute;
             z-index: 16;
             transition: background 0.2s;
         }
-        /* Jobb oldali sáv */
-        .handle-r {
-            right: -6px; top: 0;
-            width: 12px; height: 100%;
-            cursor: ew-resize;
-        }
-        /* Alsó sáv */
-        .handle-b {
-            bottom: -6px; left: 0;
-            width: 100%; height: 12px;
-            cursor: ns-resize;
-        }
-        /* Sarok (mindkét irány) */
-        .handle-rb {
-            right: -8px; bottom: -8px;
-            width: 20px; height: 20px;
-            cursor: nwse-resize;
-            z-index: 17;
-        }
-
-        /* Vizuális visszajelzés kijelöléskor */
+        .handle-r { right: -6px; top: 0; width: 12px; height: 100%; cursor: ew-resize; }
+        .handle-b { bottom: -6px; left: 0; width: 100%; height: 12px; cursor: ns-resize; }
+        .handle-rb { right: -8px; bottom: -8px; width: 20px; height: 20px; cursor: nwse-resize; z-index: 17; }
         .handle:hover { background: rgba(37, 99, 235, 0.1); }
 
         .robot-container {
@@ -114,7 +93,7 @@
             z-index: 15;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             user-select: none;
-            pointer-events: none; /* A címke ne zavarja az átméretezést */
+            pointer-events: none;
         }
         .label-w { bottom: -35px; left: 50%; transform: translateX(-50%); }
         .label-h { right: -65px; top: 50%; transform: translateY(-50%); }
@@ -144,7 +123,9 @@
 
         .guess-row { display: flex; gap: 0.75rem; }
         .guess-input { flex: 1; padding: 0.7rem; border: 1px solid #cbd5e1; border-radius: 0.6rem; font-weight: 700; text-align: center; outline: none; }
-        .guess-btn { background: white; border: 1px solid #cbd5e1; padding: 0.7rem 1.5rem; border-radius: 0.6rem; font-weight: 700; cursor: pointer; }
+        .guess-input:disabled { background: #f1f5f9; cursor: not-allowed; }
+        .guess-btn { background: white; border: 1px solid #cbd5e1; padding: 0.7rem 1.5rem; border-radius: 0.6rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .guess-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .box-lifting { transform: translateY(-40px) scale(1.05); box-shadow: 0 20px 30px rgba(0,0,0,0.15); }
     </style>
@@ -155,7 +136,6 @@
     <div class="main-card">
         <h1>Raktárautomatizálás</h1>
         <p class="subtitle">Méretezze be a dobozt a széleinél fogva! <br>A robot visszajelzései alapján találja ki a rekesz méretét.</p>
-        <div class="hidden-strategy" id="status-text"></div>
 
         <div class="topbar">
             <span class="pill" id="counter">Használat: 0</span>
@@ -166,7 +146,6 @@
             <div class="resizable-box" id="box">
                 <div class="dim-label label-w" id="label-w-container"><span id="display-w">40</span> cm</div>
                 <div class="dim-label label-h" id="label-h-container"><span id="display-h">30</span> cm</div>
-                <!-- Interaktív szegélyek -->
                 <div class="handle handle-r" data-axis="x" title="Szélesség állítása"></div>
                 <div class="handle handle-b" data-axis="y" title="Magasság állítása"></div>
                 <div class="handle handle-rb" data-axis="both" title="Szabad átméretezés"></div>
@@ -196,11 +175,11 @@
         </div>
 
         <div class="section">
-            <div class="section-title">Rekesz méretének meghatározása</div>
+            <div class="section-title">Rekesz méretének meghatározása (Csak egy próbálkozás!)</div>
             <div class="guess-row">
                 <input type="number" class="guess-input" id="guess-w" placeholder="Szél.">
                 <input type="number" class="guess-input" id="guess-h" placeholder="Mag.">
-                <button class="guess-btn" onclick="submitGuess()">Beküldés</button>
+                <button class="guess-btn" id="guess-btn" onclick="submitGuess()">Beküldés</button>
             </div>
             <div class="msg-wrap"><span class="msg" id="guess-out"></span></div>
         </div>
@@ -216,7 +195,7 @@
     const SCALE = 4;
 
     let possiblePairs = []; 
-    let tries, historyData, isAnimating = false;
+    let tries, isAnimating = false, gameOver = false;
     let currentW = 40;
     let currentH = 30;
 
@@ -224,7 +203,9 @@
     const robotEl = document.getElementById('robot');
     const robotStatus = document.getElementById('robot-status');
     const sendBtn = document.getElementById('send-btn');
-    const statusText = document.getElementById('status-text');
+    const guessBtn = document.getElementById('guess-btn');
+    const guessWInput = document.getElementById('guess-w');
+    const guessHInput = document.getElementById('guess-h');
 
     function resetGame() {
         possiblePairs = [];
@@ -234,18 +215,21 @@
             }
         }
         tries = 0;
-        historyData = [];
         currentW = 40;
         currentH = 30;
         isAnimating = false;
+        gameOver = false;
         
         document.getElementById('counter').textContent = 'Használat: 0';
         document.getElementById('history-section').style.display = 'none';
         document.getElementById('history-body').innerHTML = '';
-        document.getElementById('send-btn').disabled = false;
-        document.getElementById('guess-w').value = '';
-        document.getElementById('guess-h').value = '';
-        statusText.textContent = "A lehetséges méretek: 40-80 cm szélesség és 30-50 cm magasság.";
+        
+        sendBtn.disabled = false;
+        guessBtn.disabled = false;
+        guessWInput.disabled = false;
+        guessHInput.disabled = false;
+        guessWInput.value = '';
+        guessHInput.value = '';
         
         hideMsg('result-msg');
         hideMsg('guess-out');
@@ -261,7 +245,7 @@
     }
 
     async function startRobotAnimation() {
-        if (isAnimating) return;
+        if (isAnimating || gameOver) return;
         isAnimating = true;
         sendBtn.disabled = true;
         hideMsg('result-msg');
@@ -337,14 +321,26 @@
     }
 
     function submitGuess() {
-        const gw = parseInt(document.getElementById('guess-w').value);
-        const gh = parseInt(document.getElementById('guess-h').value);
+        if (gameOver) return;
+        
+        const gw = parseInt(guessWInput.value);
+        const gh = parseInt(guessHInput.value);
         if (!gw || !gh) return;
+
+        gameOver = true;
+        sendBtn.disabled = true;
+        guessBtn.disabled = true;
+        guessWInput.disabled = true;
+        guessHInput.disabled = true;
+
         const isActuallyFound = possiblePairs.length === 1 && possiblePairs[0].w === gw && possiblePairs[0].h === gh;
+        
         if (isActuallyFound) {
-            showMsg('guess-out', `Gratulálunk! A rekesz mérete pontosan ${gw}×${gh} cm.`, 'fit');
+            showMsg('guess-out', `Gratulálunk! Eltaláltad a rekesz méretét: ${gw}×${gh} cm.`, 'fit');
         } else {
-            showMsg('guess-out', "A megadott méretek nem egyeznek a rekesz valódi méreteivel.", "nofit");
+            // Ha nem talált, az ellenséges algoritmus választ egy véletlen párost a maradékból "igazinak"
+            const realSize = possiblePairs[Math.floor(Math.random() * possiblePairs.length)];
+            showMsg('guess-out', `Sajnos nem talált. A rekesz valódi mérete: ${realSize.w}×${realSize.h} cm volt.`, 'nofit');
         }
     }
 
@@ -355,7 +351,7 @@
     let startX, startY, startW, startH;
 
     const startResize = (e) => {
-        if (isAnimating) return;
+        if (isAnimating || gameOver) return;
         isResizing = true;
         currentAxis = e.target.getAttribute('data-axis');
         const touch = e.type.includes('touch');
