@@ -270,22 +270,22 @@
     };
 
     const STRINGS_EN = {
-        title: "Unravel It!",
+        title: "Untangle it!",
         modeLabel: "Mode",
         modeHurok: "Drawing a loop",
-        modeMezo: "Coloring a cell",
+        modeMezo: "Coloring a field",
         resetBtn: "Restart",
         rulesBtnLabel: "Rules",
         rulesTitle: "Rules",
-        rulesHtml: `<p>Color some cells of the 7 × 8 grid grey and draw a loop such that:
+        rulesHtml: `<p>Color some cells of the 7×8 grid grey and draw a loop such that:
             <ul class="list-disc ml-4">
-                <li>not all cells are grey,</li>
-                <li>the loop connects adjacent cells, cannot cross itself, and must pass through every cell exactly once,</li>
-                <li>grey cells must appear at regular intervals along the loop.</li>
+                <li>not all fields are gray,</li>
+                <li>the loop connects fields that are adjacent through a side, it does not intersect itself, and it goes through each field exactly once,</li>
+                <li>as we traverse the loop, the number of steps between consecutive gray fields is the same in each case.</li>
             </ul>
             </p>
-            <p><strong>Loop mode:</strong> Click two adjacent cells to draw a segment.</p>
-            <p><strong>Cell mode:</strong> Click white cells to turn them grey.</p>`,
+            <p><strong>Loop mode:</strong> Click two adjacent fields to draw a segment.</p>
+            <p><strong>Field mode:</strong> Click white fields to turn them gray.</p>`,
         footerText:     'This game is part of the <a href="https://monthofmath.substack.com/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">Month of Math</a> program.',
         langSwitchFlag: "🇭🇺",
         langSwitchLabel: "Magyar",
