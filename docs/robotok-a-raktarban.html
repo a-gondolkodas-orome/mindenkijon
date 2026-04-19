@@ -60,12 +60,25 @@
 
         .dim-label {
             position: absolute; background: white; border: 1px solid #cbd5e1;
-            border-radius: 4px; padding: 1px 6px; font-size: 0.75rem; font-weight: 700;
+            border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; font-weight: 700;
             color: #1e293b; z-index: 15; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            pointer-events: none; white-space: nowrap;
+            white-space: nowrap;
+            display: flex; align-items: center; gap: 2px;
         }
-        .label-w { bottom: -28px; left: 50%; transform: translateX(-50%); }
-        .label-h { right: -55px; top: 50%; transform: translateY(-50%); }
+        .dim-input {
+            width: 32px; border: none; background: transparent; text-align: center;
+            font-weight: 800; color: #000000; outline: none; -moz-appearance: textfield;
+        }
+        /* Remove arrows (spinners) */
+        .dim-input::-webkit-outer-spin-button,
+        .dim-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .dim-input:focus { background: #f8fafc; border-radius: 2px; }
+        
+        .label-w { bottom: -32px; left: 50%; transform: translateX(-50%); }
+        .label-h { right: -65px; top: 50%; transform: translateY(-50%); }
 
         .robot-container {
             position: absolute; bottom: -120px; left: 50%; transform: translateX(-50%);
@@ -125,8 +138,13 @@
     <!-- Interactive Area -->
     <div class="interactive-area-wrapper" id="container">
         <div class="resizable-box" id="box">
-            <div class="dim-label label-w"><span id="display-w">40</span> cm</div>
-            <div class="dim-label label-h"><span id="display-h">30</span> cm</div>
+            <!-- Dynamic Labels with Inputs -->
+            <div class="dim-label label-w">
+                <input type="number" id="input-w" class="dim-input" value="40" min="20" max="80"> cm
+            </div>
+            <div class="dim-label label-h">
+                <input type="number" id="input-h" class="dim-input" value="30" min="20" max="50"> cm
+            </div>
             
             <div class="handle handle-r" data-axis="r"></div>
             <div class="handle handle-l" data-axis="l"></div>
@@ -218,7 +236,7 @@
     const DICT = {
         hu: {
             title: 'Raktárautomatizálás',
-            subtitle: 'Méretezze be a dobozt a széleinél fogva! A robot visszajelzései alapján találja ki a rekesz méretét.',
+            subtitle: 'Állítsd be a doboz méretét (a széleit megfogva, vagy a számot átírva), majd ellenőrizd hogy befér-e a rekeszbe. A rekesz szélessége 40, 50, 60, 70 vagy 80 cm, a magassága pedig 30, 40 vagy 50 cm lehet. Minél kevesebb visszajelzés alapján állapítsd meg a rekesz méretét.',
             usage: n => `Próbálkozások: ${n}`,
             btnReset: 'Újrakezdés',
             btnSend: 'Doboz átadása a robotnak',
@@ -232,22 +250,22 @@
             robotFits: 'Befér! ✅',
             robotFail: 'Túl nagy! ❌',
             win: (w,h,n) => `Gratulálunk! A rekesz mérete valóban ${w}×${h}. (${n} próba)`,
-            lose: (w,h) => `Sajnos nem talált. A rekesz mérete ${w}×${h} volt.`,
+            lose: (w,h) => `Sajnos nem talált. A rekesz valódi mérete ${w}×${h} volt.`,
             footer: 'További feladatok: <a href="https://www.mindenkijon.hu/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">minden·ki·jön</a>',
             langLabel: 'English', langFlag: '🇬🇧', langHref: '?lang=en'
         },
         en: {
             title: 'Warehouse Automation',
-            subtitle: 'Resize the box and guess the bin dimensions based on the robot\'s feedback.',
+            subtitle: 'Set the size of the box (by dragging its edges or by entering the value), then check whether it fits into the compartment. The compartment can have a width of 40, 50, 60, 70, or 80 cm, and a height of 30, 40, or 50 cm. Determine the size of the compartment using as few attempts as possible.',
             usage: n => `Attempts: ${n}`,
             btnReset: 'Restart',
             btnSend: 'Hand over box to robot',
             logTitle: 'Previous results',
-            logEmpty: 'No data yet...',
-            guessTitle: 'Bin Dimensions (Final guess!)',
+            logEmpty: '...',
+            guessTitle: 'Box Dimensions',
             labelW: 'Width',
             labelH: 'Height',
-            btnSubmit: 'Submit Guess',
+            btnSubmit: 'Submit',
             robotLoading: 'Loading...',
             robotFits: 'Fits! ✅',
             robotFail: 'Fail! ❌',
@@ -271,6 +289,8 @@
     const guessBtn = document.getElementById('guess-btn');
     const logList = document.getElementById('log-list');
     const guessOutWrap = document.getElementById('guess-out-wrap');
+    const inputW = document.getElementById('input-w');
+    const inputH = document.getElementById('input-h');
 
     function applyStrings() {
         document.title = S.title;
@@ -301,23 +321,43 @@
         document.getElementById('guess-w').disabled = false;
         document.getElementById('guess-h').disabled = false;
         document.getElementById('guess-controls').classList.remove('hidden');
+        inputW.disabled = false;
+        inputH.disabled = false;
         
         logList.innerHTML = `<p class="text-slate-400 italic">${S.logEmpty}</p>`;
         guessOutWrap.classList.add('hidden');
         updateBoxUI();
     }
 
-    function updateBoxUI() {
+    function updateBoxUI(updateInputs = true) {
         boxEl.style.width = (currentW * SCALE) + 'px';
         boxEl.style.height = (currentH * SCALE) + 'px';
-        document.getElementById('display-w').textContent = currentW;
-        document.getElementById('display-h').textContent = currentH;
+        if (updateInputs) {
+            inputW.value = currentW;
+            inputH.value = currentH;
+        }
     }
+
+    inputW.addEventListener('input', (e) => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val)) return;
+        currentW = Math.max(20, Math.min(80, val));
+        updateBoxUI(false);
+    });
+
+    inputH.addEventListener('input', (e) => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val)) return;
+        currentH = Math.max(20, Math.min(50, val));
+        updateBoxUI(false);
+    });
 
     async function startRobotAnimation() {
         if (isAnimating || gameOver) return;
         isAnimating = true;
         sendBtn.disabled = true;
+        inputW.disabled = true;
+        inputH.disabled = true;
 
         robotEl.classList.add('active');
         await wait(400);
@@ -346,6 +386,8 @@
         boxEl.style.transform = "none";
         isAnimating = false;
         sendBtn.disabled = false;
+        inputW.disabled = false;
+        inputH.disabled = false;
     }
 
     function addLog(w, h, fits) {
@@ -375,6 +417,8 @@
 
         gameOver = true;
         sendBtn.disabled = true;
+        inputW.disabled = true;
+        inputH.disabled = true;
         document.getElementById('guess-controls').classList.add('hidden');
 
         const isFound = possiblePairs.length === 1 && possiblePairs[0].w === gw && possiblePairs[0].h === gh;
@@ -393,7 +437,6 @@
 
     function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // Resize Logic
     let isResizing = false, currentAxis = null, startX, startY, startW, startH;
     const startResize = (e) => {
         if (isAnimating || gameOver) return;
