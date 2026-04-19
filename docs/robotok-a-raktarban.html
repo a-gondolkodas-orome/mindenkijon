@@ -33,21 +33,54 @@
         .resizable-box {
             position: relative;
             z-index: 10;
-            border: 2px solid #b45309;
+            border: 1.5px solid #92400e;
             background: #d97706; /* Cardboard brown */
             border-radius: 2px;
-            min-width: 20px;
-            min-height: 20px;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .resizable-box::before {
-            content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-            background: rgba(0,0,0,0.1); transform: translateY(-50%);
+        
+        /* Thick Dark Brown Tape */
+        .box-tape {
+            position: absolute;
+            background: rgba(214, 175, 75, 0.82); /* Dark brown industrial tape */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            z-index: 11;
         }
-        .resizable-box::after {
-            content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 100%;
-            background: rgba(0,0,0,0.1); transform: translateX(-50%);
+        .tape-h { width: 100%; height: 14px; top: 50%; left: 0; transform: translateY(-50%); opacity: 0.95; }
+        .tape-v { height: 100%; width: 14px; left: 50%; top: 0; transform: translateX(-50%); opacity: 0.8; }
+
+        /* Graphics: Barcode, Do Not Flip, Fragile */
+        .box-graphics {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 12;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0.7;
+        }
+        
+        .barcode {
+            width: 32px;
+            height: 16px;
+            background: repeating-linear-gradient(90deg, #1e1b4b 0, #1e1b4b 1px, transparent 1px, transparent 3px);
+            background-color: rgba(255, 255, 255, 0);
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: #271001;
         }
 
         .handle { position: absolute; z-index: 16; transition: background 0.2s; }
@@ -69,7 +102,6 @@
             width: 32px; border: none; background: transparent; text-align: center;
             font-weight: 800; color: #000000; outline: none; -moz-appearance: textfield;
         }
-        /* Remove arrows (spinners) */
         .dim-input::-webkit-outer-spin-button,
         .dim-input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -98,15 +130,18 @@
 
         .control-btn { transition: all 0.2s; touch-action: manipulation; }
         .control-btn:active:not(:disabled) { transform: scale(0.95); }
-        .lang-switch:hover { background-color: #f1f5f9; }
-
-        .msg-anim { animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 100% { transform: scale(1); } }
         
         .log-container {
             max-height: 120px;
             overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            align-content: start;
         }
+
+        .msg-anim { animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body class="p-2 md:p-6 min-h-screen flex items-center justify-center">
@@ -138,12 +173,33 @@
     <!-- Interactive Area -->
     <div class="interactive-area-wrapper" id="container">
         <div class="resizable-box" id="box">
+            <!-- Box Details -->
+            <div class="box-tape tape-h"></div>
+            <div class="box-tape tape-v"></div>
+            
+            <div class="box-graphics">
+                <div class="flex justify-between items-start w-full">
+                    <div class="barcode"></div>
+                    <!-- Fragile Glass Icon SVG -->
+                    <svg class="icon-svg" viewBox="0 0 24 24">
+                        <path d="M19,2H5V4H7V10C7,12.76 8.79,15.11 11,15.82V18H9V20H15V18H13V15.82C15.21,15.11 17,12.76 17,10V4H19V2M15,10C15,11.65 13.65,13 12,13C10.35,13 9,11.65 9,10V4H15V10Z" />
+                    </svg>
+                </div>
+                <div class="flex justify-start w-full">
+                    <!-- Do Not Flip Icon SVG -->
+                    <svg class="icon-svg" viewBox="0 0 24 24" title="Do not flip">
+                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.47 4.39,14.86 5.08,16.05L16.05,5.08C14.86,4.39 13.47,4 12,4M18.92,7.95L7.95,18.92C9.14,19.61 10.53,20 12,20A8,8 0 0,0 20,12C20,10.53 19.61,9.14 18.92,7.95Z" />
+                        <rect x="8" y="9" width="8" height="6" fill="none" stroke="currentColor" stroke-width="1.5" />
+                    </svg>
+                </div>
+            </div>
+
             <!-- Dynamic Labels with Inputs -->
             <div class="dim-label label-w">
-                <input type="number" id="input-w" class="dim-input" value="40" min="20" max="80"> cm
+                <input type="number" id="input-w" class="dim-input" value="40" min="40" max="80"> cm
             </div>
             <div class="dim-label label-h">
-                <input type="number" id="input-h" class="dim-input" value="30" min="20" max="50"> cm
+                <input type="number" id="input-h" class="dim-input" value="30" min="30" max="50"> cm
             </div>
             
             <div class="handle handle-r" data-axis="r"></div>
@@ -175,8 +231,8 @@
         <!-- Log Section -->
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col min-h-[140px]">
             <h3 id="log-title" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Korábbi próbálkozások</h3>
-            <div id="log-list" class="log-container text-xs space-y-1">
-                <p class="text-slate-400 italic">Még nincs adat...</p>
+            <div id="log-list" class="log-container text-xs">
+                <p id="log-empty-msg" class="text-slate-400 italic col-span-2 text-center">...</p>
             </div>
         </div>
 
@@ -184,7 +240,6 @@
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col min-h-[140px]">
             <h3 id="guess-title" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Végső tipp</h3>
             
-            <!-- Selection Dropdowns -->
             <div id="guess-controls" class="flex flex-col gap-2">
                 <div class="grid grid-cols-2 gap-2">
                     <div class="flex flex-col">
@@ -278,6 +333,8 @@
 
     const S = DICT[LANG];
     const WIDTHS = [40, 50, 60, 70, 80], HEIGHTS = [30, 40, 50], SCALE = 3.5;
+    const MIN_W = 35, MIN_H = 25; 
+
     let possiblePairs = [], tries = 0, isAnimating = false, gameOver = false;
     let currentW = 40, currentH = 30;
     let logs = [];
@@ -288,6 +345,7 @@
     const sendBtn = document.getElementById('send-btn');
     const guessBtn = document.getElementById('guess-btn');
     const logList = document.getElementById('log-list');
+    const logEmptyMsg = document.getElementById('log-empty-msg');
     const guessOutWrap = document.getElementById('guess-out-wrap');
     const inputW = document.getElementById('input-w');
     const inputH = document.getElementById('input-h');
@@ -324,7 +382,10 @@
         inputW.disabled = false;
         inputH.disabled = false;
         
-        logList.innerHTML = `<p class="text-slate-400 italic">${S.logEmpty}</p>`;
+        logList.innerHTML = '';
+        logList.appendChild(logEmptyMsg);
+        logEmptyMsg.classList.remove('hidden');
+        
         guessOutWrap.classList.add('hidden');
         updateBoxUI();
     }
@@ -341,14 +402,14 @@
     inputW.addEventListener('input', (e) => {
         let val = parseInt(e.target.value);
         if (isNaN(val)) return;
-        currentW = Math.max(20, Math.min(80, val));
+        currentW = Math.max(MIN_W, Math.min(80, val));
         updateBoxUI(false);
     });
 
     inputH.addEventListener('input', (e) => {
         let val = parseInt(e.target.value);
         if (isNaN(val)) return;
-        currentH = Math.max(20, Math.min(50, val));
+        currentH = Math.max(MIN_H, Math.min(50, val));
         updateBoxUI(false);
     });
 
@@ -391,10 +452,10 @@
     }
 
     function addLog(w, h, fits) {
-        if (logs.length === 0) logList.innerHTML = '';
+        if (logs.length === 0) logEmptyMsg.classList.add('hidden');
         const entry = document.createElement('div');
-        entry.className = `flex justify-between p-1 px-2 rounded mb-1 border ${fits ? 'bg-green-100 border-green-200 text-green-800' : 'bg-red-100 border-red-200 text-red-800'}`;
-        entry.innerHTML = `<span>${w}×${h} cm</span> <span>${fits ? '✓' : '✗'}</span>`;
+        entry.className = `flex justify-between p-1 px-2 rounded border text-[10px] ${fits ? 'bg-green-100 border-green-200 text-green-800' : 'bg-red-100 border-red-200 text-red-800'}`;
+        entry.innerHTML = `<span>${w}×${h}</span> <span>${fits ? '✓' : '✗'}</span>`;
         logList.prepend(entry);
         logs.push({w, h, fits});
     }
@@ -457,10 +518,11 @@
         const dx = Math.round((cx - startX) / SCALE);
         const dy = Math.round((cy - startY) / SCALE);
 
-        if (currentAxis === 'r' || currentAxis === 'both') currentW = Math.max(20, Math.min(80, startW + dx));
-        else if (currentAxis === 'l') currentW = Math.max(20, Math.min(80, startW - dx));
-        if (currentAxis === 'b' || currentAxis === 'both') currentH = Math.max(20, Math.min(50, startH + dy));
-        else if (currentAxis === 't') currentH = Math.max(20, Math.min(50, startH - dy));
+        if (currentAxis === 'r' || currentAxis === 'both') currentW = Math.max(MIN_W, Math.min(80, startW + dx));
+        else if (currentAxis === 'l') currentW = Math.max(MIN_W, Math.min(80, startW - dx));
+        
+        if (currentAxis === 'b' || currentAxis === 'both') currentH = Math.max(MIN_H, Math.min(50, startH + dy));
+        else if (currentAxis === 't') currentH = Math.max(MIN_H, Math.min(50, startH - dy));
         updateBoxUI();
     };
 
