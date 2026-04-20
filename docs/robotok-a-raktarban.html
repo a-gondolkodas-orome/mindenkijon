@@ -502,9 +502,11 @@
         inputH.disabled = true;
         document.getElementById('guess-controls').classList.add('hidden');
 
-        const isFound = possiblePairs.length === 1 && possiblePairs[0].w === gw && possiblePairs[0].h === gh;
-        const real = isFound ? {w: gw, h: gh} : possiblePairs[Math.floor(Math.random() * possiblePairs.length)];
-        
+        const alternatives = possiblePairs.filter(p => p.w !== gw || p.h !== gh);
+        const isFound = alternatives.length === 0;
+
+        const real = isFound ? {w: gw, h: gh} : alternatives[Math.floor(Math.random() * alternatives.length)];
+
         const outEl = document.getElementById('guess-out');
         if (isFound) {
             outEl.innerHTML = S.win(gw, gh, tries);
