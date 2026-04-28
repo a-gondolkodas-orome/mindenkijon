@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <title></title>
+    <title>Színkitalálás II. - Logikai Játék</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,13 +18,25 @@
             height: 100%;
             cursor: pointer;
             transition: background-color 0.5s ease-in-out, box-shadow 0.15s ease-in-out, opacity 0.3s;
-            position: relative;  /* Ezt tartsd meg */
-            /* display: flex; align-items: center; justify-content: center; - Töröld ezt */
+            position: relative;
             font-size: 0.6rem;
             border-radius: 2px;
             background-color: #f3f4f6;
             touch-action: manipulation;
         }
+
+        .painted-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 35%;
+            height: 35%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
         /* JAVÍTOTT JELÖLŐ POZÍCIÓ */
         .grid-cell.center-marker::after {
             content: '';
@@ -39,19 +51,7 @@
             z-index: 10;
         }
 
-        .painted-dot {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 35%;
-            height: 35%;
-            transform: translate(-50%, -50%);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 5;
-        }        
-        
-        .unknown-cell { /* háttérszín a .grid-cell alapstílusból jön */ }
+        .unknown-cell { }
         .target-cell {
             box-shadow: 0 0 0 3px #1f2937 inset;
             animation: pulse-shadow 1s infinite alternate;
@@ -102,7 +102,7 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
 
-<div class="game-card w-full max-w-4xl p-6 md:p-10 border border-slate-100">
+<div class="game-card w-full max-w-4xl p-6 md:p-10 border border-slate-100 relative">
 
     <div class="flex justify-end mb-4">
         <a id="lang-switch-link" href="#" class="lang-switch px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-200 text-slate-500 flex items-center gap-1.5">
