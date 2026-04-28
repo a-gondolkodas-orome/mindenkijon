@@ -97,6 +97,8 @@
         input:focus { outline: none; border-color: #eab308; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.15); }
         .action-button { transition: all 0.2s; touch-action: manipulation; }
         .action-button:active:not(:disabled) { transform: scale(0.95); }
+        .reflection-link { color: #3b82f6; text-decoration: underline; cursor: pointer; }
+        .reflection-link:hover { color: #2563eb; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
@@ -151,6 +153,30 @@
         </div>
     </div>
 
+    <div id="reflection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md w-full relative border border-slate-100">
+            <button id="close-reflection-modal" class="absolute top-2 right-2 text-slate-400 hover:text-slate-800 text-2xl font-bold w-8 h-8 rounded-full transition-colors" aria-label="Close">&times;</button>
+            <h2 id="reflection-modal-title" class="text-2xl font-bold mb-6 text-slate-800"></h2>
+            <div class="mb-6">
+                <svg id="reflection-svg" width="300" height="200" viewBox="0 0 300 200" class="mx-auto">
+                    <circle id="point-a" cx="80" cy="100" r="8" fill="#3b82f6"/>
+                    <text x="80" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#3b82f6">A</text>
+                    
+                    <circle id="center-o" cx="150" cy="100" r="6" fill="#1f2937"/>
+                    <text x="150" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#1f2937">O</text>
+                    
+                    <circle id="point-a-prime" cx="220" cy="100" r="8" fill="#ef4444" opacity="0"/>
+                    <text id="label-a-prime" x="220" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#ef4444" opacity="0">A'</text>
+                    
+                    <line id="line-ao" x1="80" y1="100" x2="150" y2="100" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" opacity="0"/>
+                    <line id="line-oa-prime" x1="150" y1="100" x2="220" y2="100" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" opacity="0"/>
+                </svg>
+            </div>
+            <p id="reflection-description" class="text-slate-600 text-sm mb-4"></p>
+            <button id="replay-animation" class="action-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors shadow-md"></button>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -160,7 +186,7 @@
 
     const STRINGS_HU = {
         pageTitle: "Színkitalálás",
-        subtitle: "A lenti ábrán a fekete pöttyök szimmetria-középpontok. Néhány mező színét megadtuk, ezek alapján kell kitalálnod 5 mező színét. Cél, hogy minél többször helyesen tippelj, minél kevesebb idő alatt. Más mezőkre is rakhatsz jelölőt, ez nem számít tippnek.",
+        subtitle: "A lenti ábrán a fekete pöttyök szimmetria-középpontok. Néhány mező színét megadtuk, ezek alapján kell kitalálnod 5 mező színét. Cél, hogy minél többször helyesen tippelj, minél kevesebb idő alatt. Más mezőkre is rakhatsz jelölőt, ez nem számít tippnek. <span id='reflection-link' class='reflection-link'>Mi a középpontos tükrözés?</span>",
         scoreLabel: "Pontszám:",
         restartBtn: "↺ Újrakezdés",
         paintLabel: "Ez csak jelölő, nem tipp",
@@ -174,11 +200,14 @@
         langSwitchLabel: "English",
         langSwitchHref: "?lang=en",
         footer: 'További feladatok: <a href="https://www.mindenkijon.hu/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">minden·ki·jön</a>',
+        reflectionModalTitle: "Mi a középpontos tükrözés?",
+        reflectionDescription: "Az A pontot az O középpontra tükrözve az A' pontot kapjuk. Az O pont az AA' szakasz felezőpontja.",
+        replayAnimation: "Animáció újra"
     };
 
     const STRINGS_EN = {
         pageTitle: "Color Guessing",
-        subtitle: "In the grid below, black dots mark symmetry centers. Some cell colors are given, and you need to guess the colors of 5 cells based on these. The goal is to guess correctly as many times as possible in the shortest time. You can also place markers on other cells; these don't count as guesses.",
+        subtitle: "In the grid below, black dots mark symmetry centers. Some cell colors are given, and you need to guess the colors of 5 cells based on these. The goal is to guess correctly as many times as possible in the shortest time. You can also place markers on other cells; these don't count as guesses. <span id='reflection-link' class='reflection-link'>What is point reflection?</span>",
         scoreLabel: "Score:",
         restartBtn: "↺ Restart",
         paintLabel: "This is just a marker, not a guess",
@@ -192,6 +221,9 @@
         langSwitchLabel: "Magyar",
         langSwitchHref: "?lang=hu",
         footer: 'This game is part of the <a href="https://monthofmath.substack.com/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">Month of Math</a> program.',
+        reflectionModalTitle: "What is point reflection?",
+        reflectionDescription: "When we reflect point A across center O, we get point A'. Point O is the midpoint of segment AA'.",
+        replayAnimation: "Replay Animation"
     };
 
     const STRINGS = LANG === 'en' ? STRINGS_EN : STRINGS_HU;
@@ -223,6 +255,11 @@
         modalMessage:     $('modal-message'),
         restartButton:    $('restart-modal-button'),
         closeModalButton: $('close-modal-button'),
+        reflectionModal:  $('reflection-modal'),
+        closeReflectionModal: $('close-reflection-modal'),
+        reflectionModalTitle: $('reflection-modal-title'),
+        reflectionDescription: $('reflection-description'),
+        replayAnimation:  $('replay-animation'),
     };
     const colorOptionButtons = dom.colorPickerModal.querySelectorAll('.color-option-button');
 
@@ -238,6 +275,9 @@
         $('lang-switch-flag').innerText = STRINGS.langSwitchFlag;
         $('lang-switch-label').innerText = STRINGS.langSwitchLabel;
         $('lang-switch-link').href = STRINGS.langSwitchHref;
+        dom.reflectionModalTitle.innerText = STRINGS.reflectionModalTitle;
+        dom.reflectionDescription.innerText = STRINGS.reflectionDescription;
+        dom.replayAnimation.innerText = STRINGS.replayAnimation;
     }
 
     function resetState() {
@@ -615,6 +655,51 @@
         updateGridDisplay();
     }
 
+    function playReflectionAnimation() {
+        const pointA = $('point-a');
+        const pointAPrime = $('point-a-prime');
+        const labelAPrime = $('label-a-prime');
+        const lineAO = $('line-ao');
+        const lineOAPrime = $('line-oa-prime');
+
+        // Reset
+        pointA.setAttribute('cx', '80');
+        pointAPrime.setAttribute('opacity', '0');
+        labelAPrime.setAttribute('opacity', '0');
+        lineAO.setAttribute('opacity', '0');
+        lineOAPrime.setAttribute('opacity', '0');
+
+        // Animation sequence
+        setTimeout(() => {
+            lineAO.setAttribute('opacity', '1');
+            lineAO.style.transition = 'opacity 0.3s';
+        }, 300);
+
+        setTimeout(() => {
+            pointA.style.transition = 'cx 1.5s ease-in-out';
+            pointA.setAttribute('cx', '150');
+        }, 600);
+
+        setTimeout(() => {
+            lineOAPrime.setAttribute('opacity', '1');
+            lineOAPrime.style.transition = 'opacity 0.3s';
+        }, 2100);
+
+        setTimeout(() => {
+            pointA.style.transition = 'cx 1.5s ease-in-out';
+            pointA.setAttribute('cx', '220');
+            pointAPrime.style.transition = 'opacity 0.5s';
+            pointAPrime.setAttribute('opacity', '1');
+            labelAPrime.style.transition = 'opacity 0.5s';
+            labelAPrime.setAttribute('opacity', '1');
+        }, 2400);
+
+        setTimeout(() => {
+            pointA.style.transition = 'cx 0.8s ease-in-out';
+            pointA.setAttribute('cx', '80');
+        }, 4200);
+    }
+
     function setupEventListeners() {
         dom.restartButton.onclick    = () => { dom.messageModal.classList.add('hidden'); startGame(); };
         dom.closeModalButton.onclick = () =>   dom.messageModal.classList.add('hidden');
@@ -651,6 +736,30 @@
                 hideColorPicker();
             }
         });
+
+        // Reflection modal handlers
+        const reflectionLink = $('reflection-link');
+        if (reflectionLink) {
+            reflectionLink.onclick = (e) => {
+                e.preventDefault();
+                dom.reflectionModal.classList.remove('hidden');
+                playReflectionAnimation();
+            };
+        }
+
+        dom.closeReflectionModal.onclick = () => {
+            dom.reflectionModal.classList.add('hidden');
+        };
+
+        dom.replayAnimation.onclick = () => {
+            playReflectionAnimation();
+        };
+
+        dom.reflectionModal.onclick = (e) => {
+            if (e.target === dom.reflectionModal) {
+                dom.reflectionModal.classList.add('hidden');
+            }
+        };
     }
 
     function startGame() {
