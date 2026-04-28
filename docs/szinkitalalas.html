@@ -424,7 +424,7 @@
         if (isKnown || gameEnded) {
             cell.style.backgroundColor = actualColor;
             cell.classList.remove('unknown-cell');
-            cell.style.opacity = state.initialRevealedCells.has(cellKey) ? '1' : '0.7';
+            cell.style.opacity = state.initialRevealedCells.has(cellKey) ? '1' : '0.5';
             if (state.initialRevealedCells.has(cellKey)) cell.classList.add('initial-cell');
             if (Object.hasOwn(state.guessedCells, cellKey)) {
                 appendEmoji(cell, state.guessedCells[cellKey] ? '✓' : '✗');
