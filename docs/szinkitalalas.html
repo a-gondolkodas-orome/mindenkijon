@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <title>Színkitalálás II. - Logikai Játék</title>
+    <title></title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -155,25 +155,32 @@
 
     <div id="reflection-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md w-full relative border border-slate-100">
-            <button id="close-reflection-modal" class="absolute top-2 right-2 text-slate-400 hover:text-slate-800 text-2xl font-bold w-8 h-8 rounded-full transition-colors" aria-label="Close">&times;</button>
+            <button id="close-reflection-modal" class="absolute top-2 right-2 text-slate-400 hover:text-slate-800 text-2xl font-bold w-8 h-8 rounded-full">&times;</button>
             <h2 id="reflection-modal-title" class="text-2xl font-bold mb-6 text-slate-800"></h2>
-            <div class="mb-6">
-                <svg id="reflection-svg" width="300" height="200" viewBox="0 0 300 200" class="mx-auto">
-                    <circle id="point-a" cx="80" cy="100" r="8" fill="#3b82f6"/>
-                    <text x="80" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#3b82f6">A</text>
+            <div class="mb-6 bg-slate-50 rounded-xl p-4 overflow-visible">
+                <svg id="reflection-svg" width="340" height="200" viewBox="0 0 340 200" class="mx-auto overflow-visible">
+
+                    <line id="line-full-1" x1="40" y1="140" x2="200" y2="20" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" opacity="0"/>
+                    <line id="line-full-2" x1="200" y1="20" x2="220" y2="160" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" opacity="0"/>
                     
-                    <circle id="center-o" cx="150" cy="100" r="6" fill="#1f2937"/>
-                    <text x="150" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#1f2937">O</text>
+                    <circle id="center-o" cx="120" cy="80" r="5" fill="#1f2937" opacity="0"/>
+                    <text id="label-o" x="120" y="65" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937" opacity="0">O₁</text>
                     
-                    <circle id="point-a-prime" cx="220" cy="100" r="8" fill="#ef4444" opacity="0"/>
-                    <text id="label-a-prime" x="220" y="85" text-anchor="middle" font-size="16" font-weight="bold" fill="#ef4444" opacity="0">A'</text>
-                    
-                    <line id="line-ao" x1="80" y1="100" x2="150" y2="100" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" opacity="0"/>
-                    <line id="line-oa-prime" x1="150" y1="100" x2="220" y2="100" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" opacity="0"/>
+                    <circle id="center-o2" cx="210" cy="90" r="5" fill="#1f2937" opacity="0"/>
+                    <text id="label-o2" x="210" y="75" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937" opacity="0">O₂</text>
+
+                    <circle id="point-a-prime" cx="200" cy="20" r="8" fill="#ef4444" opacity="0"/>
+                    <text id="label-a-prime" x="200" y="5" text-anchor="middle" font-size="14" font-weight="bold" fill="#ef4444" opacity="0">A'</text>
+
+                    <circle id="point-a-double-prime" cx="220" cy="160" r="8" fill="#10b981" opacity="0"/>
+                    <text id="label-a-double-prime" x="220" y="185" text-anchor="middle" font-size="14" font-weight="bold" fill="#10b981" opacity="0">A''</text>
+
+                    <circle id="point-a" cx="40" cy="140" r="8" fill="#3b82f6"/>
+                    <text id="label-a-static" x="40" y="165" text-anchor="middle" font-size="14" font-weight="bold" fill="#3b82f6">A</text>
                 </svg>
             </div>
-            <p id="reflection-description" class="text-slate-600 text-sm mb-4"></p>
-            <button id="replay-animation" class="action-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors shadow-md"></button>
+            <p id="reflection-description" class="text-slate-600 text-sm mb-6 min-h-[3rem] font-medium"></p>
+            <button id="replay-animation" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md"></button>
         </div>
     </div>
 
@@ -200,9 +207,11 @@
         langSwitchLabel: "English",
         langSwitchHref: "?lang=en",
         footer: 'További feladatok: <a href="https://www.mindenkijon.hu/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">minden·ki·jön</a>',
-        reflectionModalTitle: "Mi a középpontos tükrözés?",
-        reflectionDescription: "Az A pontot az O középpontra tükrözve az A' pontot kapjuk. Az O pont az AA' szakasz felezőpontja.",
-        replayAnimation: "Animáció újra"
+        reflectionModalTitle: "Középpontos tükrözés",
+        step1: "1. Az A pontot az O₁ középpontra tükrözve kapjuk az A' pontot.",
+        step2: "2. Ha az A' pontot egy másik (O₂) pontra is tükrözzük, megkapjuk az A''-t.",
+        step3: "Két egymást követő tükrözés egy eltolásnak felel meg!",
+        replayAnimation: "Animáció indítása"
     };
 
     const STRINGS_EN = {
@@ -221,9 +230,11 @@
         langSwitchLabel: "Magyar",
         langSwitchHref: "?lang=hu",
         footer: 'This game is part of the <a href="https://monthofmath.substack.com/" target="_blank" rel="noopener" class="underline hover:text-slate-600 transition-colors">Month of Math</a> program.',
-        reflectionModalTitle: "What is point reflection?",
-        reflectionDescription: "When we reflect point A across center O, we get point A'. Point O is the midpoint of segment AA'.",
-        replayAnimation: "Replay Animation"
+        reflectionModalTitle: "Point Reflection",
+        step1: "1. Reflecting point A across O₁ gives point A'.",
+        step2: "2. Reflecting A' across another center O₂ gives point A''.",
+        step3: "Two consecutive reflections result in a translation!",
+        replayAnimation: "Start Animation"
     };
 
     const STRINGS = LANG === 'en' ? STRINGS_EN : STRINGS_HU;
@@ -656,48 +667,43 @@
     }
 
     function playReflectionAnimation() {
-        const pointA = $('point-a');
-        const pointAPrime = $('point-a-prime');
-        const labelAPrime = $('label-a-prime');
-        const lineAO = $('line-ao');
-        const lineOAPrime = $('line-oa-prime');
+        const els = {
+            a: $('point-a'), ap: $('point-a-prime'), app: $('point-a-double-prime'),
+            o1: $('center-o'), o2: $('center-o2'), lo1: $('label-o'), lo2: $('label-o2'),
+            lap: $('label-a-prime'), lapp: $('label-a-double-prime'), l1: $('line-full-1'), l2: $('line-full-2')
+        };
+        const reset = () => {
+            Object.values(els).forEach(e => { e.style.transition = 'none'; e.setAttribute('opacity', '0'); });
+            els.a.setAttribute('opacity', '1'); els.a.setAttribute('cx', '40'); els.a.setAttribute('cy', '140');
+            $('reflection-description').innerText = "";
+        };
+        reset();
+        const delay = ms => new Promise(res => setTimeout(res, ms));
 
-        // Reset
-        pointA.setAttribute('cx', '80');
-        pointAPrime.setAttribute('opacity', '0');
-        labelAPrime.setAttribute('opacity', '0');
-        lineAO.setAttribute('opacity', '0');
-        lineOAPrime.setAttribute('opacity', '0');
+        async function run() {
+            $('reflection-description').innerText = STRINGS.step1;
+            await delay(500); els.o1.setAttribute('opacity', '1'); els.lo1.setAttribute('opacity', '1');
+            await delay(500); els.l1.setAttribute('opacity', '1');
+            await delay(300);
+            els.a.style.transition = 'all 2s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+            els.a.setAttribute('cx', '200'); els.a.setAttribute('cy', '20'); // Direct path to A'
+            await delay(2100);
+            els.ap.setAttribute('opacity', '0.4'); els.lap.setAttribute('opacity', '1');
 
-        // Animation sequence
-        setTimeout(() => {
-            lineAO.setAttribute('opacity', '1');
-            lineAO.style.transition = 'opacity 0.3s';
-        }, 300);
-
-        setTimeout(() => {
-            pointA.style.transition = 'cx 1.5s ease-in-out';
-            pointA.setAttribute('cx', '150');
-        }, 600);
-
-        setTimeout(() => {
-            lineOAPrime.setAttribute('opacity', '1');
-            lineOAPrime.style.transition = 'opacity 0.3s';
-        }, 2100);
-
-        setTimeout(() => {
-            pointA.style.transition = 'cx 1.5s ease-in-out';
-            pointA.setAttribute('cx', '220');
-            pointAPrime.style.transition = 'opacity 0.5s';
-            pointAPrime.setAttribute('opacity', '1');
-            labelAPrime.style.transition = 'opacity 0.5s';
-            labelAPrime.setAttribute('opacity', '1');
-        }, 2400);
-
-        setTimeout(() => {
-            pointA.style.transition = 'cx 0.8s ease-in-out';
-            pointA.setAttribute('cx', '80');
-        }, 4200);
+            await delay(800);
+            $('reflection-description').innerText = STRINGS.step2;
+            els.o2.setAttribute('opacity', '1'); els.lo2.setAttribute('opacity', '1');
+            await delay(500); els.l2.setAttribute('opacity', '1');
+            await delay(300);
+            els.a.style.transition = 'all 2s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+            els.a.setAttribute('cx', '220'); els.a.setAttribute('cy', '160'); // Direct path to A''
+            await delay(2100);
+            els.app.setAttribute('opacity', '0.4'); els.lapp.setAttribute('opacity', '1');
+            
+            await delay(800);
+            $('reflection-description').innerText = STRINGS.step3;
+        }
+        run();
     }
 
     function setupEventListeners() {
@@ -737,7 +743,6 @@
             }
         });
 
-        // Reflection modal handlers
         const reflectionLink = $('reflection-link');
         if (reflectionLink) {
             reflectionLink.onclick = (e) => {
