@@ -198,8 +198,8 @@
 
     const CFG = {
         GRID_SIZE:   12,
-        UNIT_ROWS:   2, // a téglalapok magassága (4x3 szimmetria szerint a magasság 2 a rácsközök között)
-        UNIT_COLS:   3, // a téglalapok szélessége
+        UNIT_ROWS:   2, 
+        UNIT_COLS:   3, 
         GUESS_GOAL:  5,
         COLORS: ['#ef4444', '#10b981', '#3b82f6'],
         COLOR_MAP: { C0: '#ef4444', C1: '#10b981', C2: '#3b82f6' },
@@ -368,7 +368,6 @@
         cell.appendChild(span);
     }
 
-    // Segédfüggvény a célcella kiválasztásához
     function selectNewTarget() {
         const { GRID_SIZE, UNIT_ROWS, UNIT_COLS } = CFG;
         const allCells = [];
@@ -385,22 +384,17 @@
 
         const currentGoalIndex = state.guessesCompleted + 1;
 
-        // Segédfüggvény: megadja, hogy egy cella melyik téglalapba (r, c index) tartozik
         const getRectCoords = (r, c) => ({
             r: Math.floor(r / UNIT_ROWS),
             c: Math.floor(c / UNIT_COLS)
         });
 
-        // Segédfüggvény: megadja egy téglalap (r, c) szomszédos téglalapjainak csúcsait (középpontjait)
         const getRectCorners = (rectR, rectC) => {
             const corners = [];
-            // Egy téglalap (rectR, rectC) "csúcsai" a rácsban lévő szimmetria középpontok
-            // Ezek: (rectR*UNIT_ROWS - 0.5, rectC*UNIT_COLS - 0.5) stb.
             for (let dr = 0; dr <= 1; dr++) {
                 for (let dc = 0; dc <= 1; dc++) {
                     const cr = (rectR + dr) * UNIT_ROWS - 0.5;
                     const cc = (rectC + dc) * UNIT_COLS - 0.5;
-                    // Csak az érvényes középpontokat adjuk hozzá
                     if (SYMMETRY_CENTERS.some(p => p.r === cr && p.c === cc)) {
                         corners.push({ r: cr, c: cc });
                     }
@@ -424,39 +418,40 @@
             let found = false;
 
             if (currentGoalIndex === 1) {
-                // 1. cella: Saját téglalap csúcsára tükrözve ismert mező
                 const corners = getRectCorners(rect.r, rect.c);
                 if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) found = true;
 
             } else if (currentGoalIndex === 2 || currentGoalIndex === 3) {
-                // 2-3. cella: Szomszédos téglalap csúcsára tükrözve ismert mező
-                for (let dr = -1; dr <= 1; dr++) {
-                    for (let dc = -1; dc <= 1; dc++) {
-                        if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
-                        const corners = getRectCorners(rect.r + dr, rect.c + dc);
-                        if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) {
-                            found = true;
-                            break;
+                const ownCorners = getRectCorners(rect.r, rect.c);
+                const isKnownFromOwn = ownCorners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)));
+                
+                if (!isKnownFromOwn) {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
+                            const corners = getRectCorners(rect.r + dr, rect.c + dc);
+                            if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) {
+                                found = true;
+                                break;
+                            }
                         }
+                        if (found) break;
                     }
-                    if (found) break;
                 }
 
             } else if (currentGoalIndex === 4) {
-                // 4. cella: Két különböző fekete pöttyre tükrözve ismert mező
                 let count = 0;
                 for (const p of SYMMETRY_CENTERS) {
                     if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
-                    if (count >= 2) { found = true; break; }
                 }
+                if (count >= 2) found = true;
 
             } else if (currentGoalIndex === 5) {
-                // 5. cella: Legalább három különböző fekete pöttyre tükrözve ismert mező
                 let count = 0;
                 for (const p of SYMMETRY_CENTERS) {
                     if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
-                    if (count >= 3) { found = true; break; }
                 }
+                if (count >= 3) found = true;
             }
 
             if (found) {
@@ -466,7 +461,6 @@
             }
         }
 
-        // Fallback: Ha nem találtunk specifikusat, bármi ami nem ismert
         state.targetCell = allCells.find(c => !state.knownCells.has(`${c.r},${c.c}`));
         if (!state.targetCell) endGame();
         else updateGridDisplay();
@@ -479,7 +473,6 @@
                 typeCells[state.gridData[r][c]].push({ r, c });
             }
         }
-        // Minden típusból egy véletlen mező (12 mező összesen)
         typeCells.forEach(cells => {
             const { r, c } = cells[Math.floor(Math.random() * cells.length)];
             const key = `${r},${c}`;
