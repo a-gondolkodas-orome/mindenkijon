@@ -403,11 +403,16 @@
             return corners;
         };
 
-        const getReflectedKey = (r, c, pr, pc) => {
+        const getReflectedPos = (r, c, pr, pc) => {
             const rr = 2 * pr - r;
             const rc = 2 * pc - c;
-            if (rr >= 0 && rr < GRID_SIZE && rc >= 0 && rc < GRID_SIZE) return `${rr},${rc}`;
+            if (rr >= 0 && rr < GRID_SIZE && rc >= 0 && rc < GRID_SIZE) return { r: rr, c: rc };
             return null;
+        };
+
+        const getReflectedKey = (r, c, pr, pc) => {
+            const pos = getReflectedPos(r, c, pr, pc);
+            return pos ? `${pos.r},${pos.c}` : null;
         };
 
         for (const cell of randomizedCells) {
@@ -417,11 +422,13 @@
             const rect = getRectCoords(cell.r, cell.c);
             let found = false;
 
-            if (currentGoalIndex === 1) {
+            // 1. és 2. célcella: régi 1. logika
+            if (currentGoalIndex === 1 || currentGoalIndex === 2) {
                 const corners = getRectCorners(rect.r, rect.c);
                 if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) found = true;
 
-            } else if (currentGoalIndex === 2 || currentGoalIndex === 3) {
+            // 3. célcella: régi 2. logika
+            } else if (currentGoalIndex === 3) {
                 const ownCorners = getRectCorners(rect.r, rect.c);
                 const isKnownFromOwn = ownCorners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)));
                 
@@ -439,19 +446,63 @@
                     }
                 }
 
+            // 4. célcella: régi 3. logika
             } else if (currentGoalIndex === 4) {
-                let count = 0;
-                for (const p of SYMMETRY_CENTERS) {
-                    if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
+                const ownCorners = getRectCorners(rect.r, rect.c);
+                const isKnownFromOwn = ownCorners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)));
+                
+                if (!isKnownFromOwn) {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
+                            const corners = getRectCorners(rect.r + dr, rect.c + dc);
+                            if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
                 }
-                if (count >= 2) found = true;
 
+            // 5. célcella: régi 4. logika
             } else if (currentGoalIndex === 5) {
-                let count = 0;
-                for (const p of SYMMETRY_CENTERS) {
-                    if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
+                const ownCorners = getRectCorners(rect.r, rect.c);
+                const ownCornersSet = new Set(ownCorners.map(p => `${p.r},${p.c}`));
+                
+                for (const p1 of ownCorners) {
+                    const midPos = getReflectedPos(cell.r, cell.c, p1.r, p1.c);
+                    if (!midPos) continue;
+
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
+                            
+                            const adjCorners = getRectCorners(rect.r + dr, rect.c + dc);
+                            for (const p2 of adjCorners) {
+                                if (ownCornersSet.has(`${p2.r},${p2.c}`)) continue;
+
+                                const finalKey = getReflectedKey(midPos.r, midPos.c, p2.r, p2.c);
+                                if (finalKey && state.knownCells.has(finalKey)) {
+                                    let knownBySingle = false;
+                                    for (const p of SYMMETRY_CENTERS) {
+                                        if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) {
+                                            knownBySingle = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!knownBySingle) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (found) break;
+                        }
+                        if (found) break;
+                    }
+                    if (found) break;
                 }
-                if (count >= 3) found = true;
             }
 
             if (found) {
