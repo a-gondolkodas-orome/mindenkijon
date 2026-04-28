@@ -147,6 +147,7 @@
         pawnEmoji:        "👤",
         numberLineLabels: ["0", "25", "50", "75", "100"],
         statusPlayer:     "Te jössz!",
+        statusCpuMove:    "A gép {n}-et lépett, te jössz!",
         statusCpu:        "Gondolkodunk...",
         statusGameOver:   "Játék vége",
         endWin:           "Gratulálunk, győztél! 🎉",
@@ -167,6 +168,7 @@
         pawnEmoji:        "👤",
         numberLineLabels: ["0", "25", "50", "75", "100"],
         statusPlayer:     "Your turn!",
+        statusCpuMove:    "CPU moved {n}, your turn!",
         statusCpu:        "Thinking...",
         statusGameOver:   "Game over",
         endWin:           "Congratulations, you won! 🎉",
@@ -183,7 +185,7 @@
     const STRINGS = LANG === 'en' ? STRINGS_EN : STRINGS_HU;
 
     const CONFIG = { target: 100, min: 3, max: 10 };
-    let state = { score: 0, player: 1, active: true };
+    let state = { score: 0, player: 1, active: true, lastCpuMove: null };
 
     const elements = {
         grid:      document.getElementById('button-grid'),
@@ -258,7 +260,16 @@
         }
 
         if (state.active) {
-            elements.status.innerText = state.player === 1 ? STRINGS.statusPlayer : STRINGS.statusCpu;
+            if (state.player === 1) {
+                if (state.lastCpuMove) {
+                    elements.status.innerText = STRINGS.statusCpuMove.replace('{n}', state.lastCpuMove);
+                } else {
+                    elements.status.innerText = STRINGS.statusPlayer;
+                }
+            } else {
+                elements.status.innerText = STRINGS.statusCpu;
+            }
+            
             elements.status.className = `px-4 py-1.5 rounded-full text-sm font-medium ${
                 state.player === 1
                     ? 'bg-blue-50 text-blue-600 border border-blue-100'
@@ -272,6 +283,11 @@
         const lsl = document.getElementById('lang-switch-link');
         lsl.style.pointerEvents = 'none';
         lsl.style.opacity = '0.35';
+        
+        if (state.player === 2) {
+            state.lastCpuMove = step;
+        }
+        
         state.score += step;
 
         if (state.score === CONFIG.target) {
@@ -340,7 +356,7 @@
     }
 
     function resetGame() {
-        state = { score: 0, player: 1, active: true };
+        state = { score: 0, player: 1, active: true, lastCpuMove: null };
         elements.alert.classList.add('hidden');
         elements.grid.classList.remove('hidden');
         elements.resetLink.classList.remove('invisible');
