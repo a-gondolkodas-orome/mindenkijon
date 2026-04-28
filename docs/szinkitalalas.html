@@ -118,7 +118,10 @@
     </header>
 
     <div class="flex justify-center items-center mb-6">
-        <div id="score-display" class="text-2xl font-bold px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl w-full sm:w-1/2 max-w-sm text-center text-slate-700"></div>
+        <!-- Score display (hidden initially) -->
+        <div id="score-display" class="hidden text-2xl font-bold px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl w-full sm:w-1/2 max-w-sm text-center text-slate-700"></div>
+        <!-- Start button (shown initially) -->
+        <button id="start-button" onclick="handleStartButton()" class="action-button text-2xl font-bold px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl w-full sm:w-1/2 max-w-sm text-center shadow-md"></button>
     </div>
 
     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
@@ -195,6 +198,7 @@
         pageTitle: "Színkitalálás",
         subtitle: "A lenti ábrán a fekete pöttyök szimmetria-középpontok. Néhány mező színét megadtuk, ezek alapján kell kitalálnod 5 mező színét. Cél, hogy minél többször helyesen tippelj, minél kevesebb idő alatt. Más mezőkre is rakhatsz jelölőt, ez nem számít tippnek. <span id='reflection-link' class='reflection-link'>Mi a középpontos tükrözés?</span>",
         scoreLabel: "Pontszám:",
+        startBtn: "▶ Start",
         restartBtn: "↺ Újrakezdés",
         paintLabel: "Ez csak jelölő, nem tipp",
         modalTitle: "Játék vége!",
@@ -202,7 +206,7 @@
         modalScore: "Elért pontszám:",
         modalTime: "Eltelt idő:",
         modalSeconds: "másodperc",
-        restartModalBtn: "Új játék",
+        restartModalBtn: "▶ Új játék",
         langSwitchFlag: "🇬🇧",
         langSwitchLabel: "English",
         langSwitchHref: "?lang=en",
@@ -218,6 +222,7 @@
         pageTitle: "Color Guessing",
         subtitle: "In the grid below, black dots mark symmetry centers. Some cell colors are given, and you need to guess the colors of 5 cells based on these. The goal is to guess correctly as many times as possible in the shortest time. You can also place markers on other cells; these don't count as guesses. <span id='reflection-link' class='reflection-link'>What is point reflection?</span>",
         scoreLabel: "Score:",
+        startBtn: "▶ Start",
         restartBtn: "↺ Restart",
         paintLabel: "This is just a marker, not a guess",
         modalTitle: "Game Over!",
@@ -225,7 +230,7 @@
         modalScore: "Final score:",
         modalTime: "Time elapsed:",
         modalSeconds: "seconds",
-        restartModalBtn: "New Game",
+        restartModalBtn: "▶ New Game",
         langSwitchFlag: "🇭🇺",
         langSwitchLabel: "Magyar",
         langSwitchHref: "?lang=hu",
@@ -260,6 +265,7 @@
         gameContainer:    document.querySelector('.game-card'),
         gridContainer:    $('grid-container'),
         scoreDisplay:     $('score-display'),
+        startButton:      $('start-button'),
         colorPickerModal: $('color-picker-modal'),
         messageModal:     $('message-modal'),
         modalTitle:       $('modal-title'),
@@ -275,6 +281,17 @@
     const colorOptionButtons = dom.colorPickerModal.querySelectorAll('.color-option-button');
 
     let state = {};
+    let gameStarted = false;
+
+    function showStartButton() {
+        dom.scoreDisplay.classList.add('hidden');
+        dom.startButton.classList.remove('hidden');
+    }
+
+    function showScoreDisplay() {
+        dom.startButton.classList.add('hidden');
+        dom.scoreDisplay.classList.remove('hidden');
+    }
 
     function applyStaticStrings() {
         document.title = STRINGS.pageTitle;
@@ -289,6 +306,8 @@
         dom.reflectionModalTitle.innerText = STRINGS.reflectionModalTitle;
         dom.reflectionDescription.innerText = STRINGS.reflectionDescription;
         dom.replayAnimation.innerText = STRINGS.replayAnimation;
+        dom.startButton.innerText = STRINGS.startBtn;
+        dom.restartButton.textContent = STRINGS.restartModalBtn;
     }
 
     function resetState() {
@@ -338,6 +357,26 @@
     const SYMMETRY_CENTERS = buildSymmetryCenters();
 
     function renderGrid() {
+        const { GRID_SIZE, UNIT_ROWS, UNIT_COLS } = CFG;
+        dom.gridContainer.innerHTML = '';
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const cell = document.createElement('div');
+                let cls = 'grid-cell unknown-cell rounded-sm';
+                if ((r + 1) % UNIT_ROWS === 0 && (c + 1) % UNIT_COLS === 0
+                        && r !== GRID_SIZE - 1 && c !== GRID_SIZE - 1) {
+                    cls += ' center-marker';
+                }
+                cell.className   = cls;
+                cell.id          = `cell-${r}-${c}`;
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                dom.gridContainer.appendChild(cell);
+            }
+        }
+    }
+
+    function renderEmptyGrid() {
         const { GRID_SIZE, UNIT_ROWS, UNIT_COLS } = CFG;
         dom.gridContainer.innerHTML = '';
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -473,12 +512,10 @@
             const rect = getRectCoords(cell.r, cell.c);
             let found = false;
 
-            // 1. és 2. célcella: régi 1. logika
             if (currentGoalIndex === 1 || currentGoalIndex === 2) {
                 const corners = getRectCorners(rect.r, rect.c);
                 if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) found = true;
 
-            // 3. célcella: régi 2. logika
             } else if (currentGoalIndex === 3) {
                 const ownCorners = getRectCorners(rect.r, rect.c);
                 const isKnownFromOwn = ownCorners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)));
@@ -497,7 +534,6 @@
                     }
                 }
 
-            // 4. célcella: régi 3. logika
             } else if (currentGoalIndex === 4) {
                 const ownCorners = getRectCorners(rect.r, rect.c);
                 const isKnownFromOwn = ownCorners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)));
@@ -516,7 +552,6 @@
                     }
                 }
 
-            // 5. célcella: régi 4. logika
             } else if (currentGoalIndex === 5) {
                 const ownCorners = getRectCorners(rect.r, rect.c);
                 const ownCornersSet = new Set(ownCorners.map(p => `${p.r},${p.c}`));
@@ -652,6 +687,9 @@
         state.isRunning = false;
         hideColorPicker();
 
+        // Show start button again on main canvas, hide score
+        showStartButton();
+
         const timeTaken = ((Date.now() - state.startTime) / 1000).toFixed(2);
         dom.modalTitle.textContent = STRINGS.modalTitle;
         dom.modalMessage.innerHTML = `
@@ -686,7 +724,7 @@
             await delay(500); els.l1.setAttribute('opacity', '1');
             await delay(300);
             els.a.style.transition = 'all 2s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-            els.a.setAttribute('cx', '200'); els.a.setAttribute('cy', '20'); // Direct path to A'
+            els.a.setAttribute('cx', '200'); els.a.setAttribute('cy', '20');
             await delay(2100);
             els.ap.setAttribute('opacity', '0.4'); els.lap.setAttribute('opacity', '1');
 
@@ -696,7 +734,7 @@
             await delay(500); els.l2.setAttribute('opacity', '1');
             await delay(300);
             els.a.style.transition = 'all 2s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-            els.a.setAttribute('cx', '220'); els.a.setAttribute('cy', '160'); // Direct path to A''
+            els.a.setAttribute('cx', '220'); els.a.setAttribute('cy', '160');
             await delay(2100);
             els.app.setAttribute('opacity', '0.4'); els.lapp.setAttribute('opacity', '1');
             
@@ -707,9 +745,6 @@
     }
 
     function setupEventListeners() {
-        dom.restartButton.onclick    = () => { dom.messageModal.classList.add('hidden'); startGame(); };
-        dom.closeModalButton.onclick = () =>   dom.messageModal.classList.add('hidden');
-
         dom.gridContainer.onclick = event => {
             const cell = event.target.closest('.grid-cell');
             if (!cell) { hideColorPicker(); return; }
@@ -774,17 +809,33 @@
 
         state.gridData = buildGridData();
         updateScoreDisplay();
+        showScoreDisplay();
         renderGrid();
         revealInitialCells();
         selectNewTarget();
-        setupEventListeners();
     }
 
-    window.restartGame = startGame;
+    function handleStartButton() {
+        dom.messageModal.classList.add('hidden');
+        startGame();
+    }
+
+    window.handleStartButton = handleStartButton;
+    window.restartGame = () => {
+        dom.messageModal.classList.add('hidden');
+        startGame();
+    };
 
     window.addEventListener('load', () => {
         applyStaticStrings();
-        startGame();
+        // Show empty grid and start button initially
+        renderEmptyGrid();
+        showStartButton();
+        setupEventListeners();
+
+        // Modal restart button
+        dom.restartButton.onclick = handleStartButton;
+        dom.closeModalButton.onclick = () => dom.messageModal.classList.add('hidden');
     });
 })();
 </script>
