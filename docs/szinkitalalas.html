@@ -37,13 +37,12 @@
             z-index: 5;
         }
 
-        /* JAVÍTOTT JELÖLŐ POZÍCIÓ */
         .grid-cell.center-marker::after {
             content: '';
             position: absolute;
-            left: 100%; /* A cella jobb szélére */
-            top: 100%;  /* A cella aljára */
-            transform: translate(-50%, -50%); /* Pontosan a rácsvonalak találkozására tolja */
+            left: 100%;
+            top: 100%;
+            transform: translate(-50%, -50%);
             width: 6px;
             height: 6px;
             background-color: #374151;
@@ -199,8 +198,8 @@
 
     const CFG = {
         GRID_SIZE:   12,
-        UNIT_ROWS:   2,
-        UNIT_COLS:   3,
+        UNIT_ROWS:   2, // a téglalapok magassága (4x3 szimmetria szerint a magasság 2 a rácsközök között)
+        UNIT_COLS:   3, // a téglalapok szélessége
         GUESS_GOAL:  5,
         COLORS: ['#ef4444', '#10b981', '#3b82f6'],
         COLOR_MAP: { C0: '#ef4444', C1: '#10b981', C2: '#3b82f6' },
@@ -212,7 +211,6 @@
     };
     CFG.TR_UNIT_COLS  = 2 * CFG.UNIT_COLS;
     CFG.TOTAL_TYPES   = CFG.UNIT_ROWS * CFG.TR_UNIT_COLS;
-    CFG.MAX_DIST_SQ   = CFG.UNIT_ROWS ** 2 + CFG.UNIT_COLS ** 2;
 
     const $ = id => document.getElementById(id);
     const dom = {
@@ -244,16 +242,16 @@
 
     function resetState() {
         state = {
-            gridData:           [],
-            knownCells:         new Set(),
+            gridData:            [],
+            knownCells:          new Set(),
             initialRevealedCells: new Set(),
-            userPaintedCells:   {},
-            guessedCells:       {},
-            targetCell:         null,
-            score:              0,
-            guessesCompleted:   0,
-            startTime:          null,
-            isRunning:          false,
+            userPaintedCells:    {},
+            guessedCells:        {},
+            targetCell:          null,
+            score:               0,
+            guessesCompleted:    0,
+            startTime:           null,
+            isRunning:           false,
         };
     }
 
@@ -279,7 +277,7 @@
         for (let r = 0; r < GRID_SIZE - 1; r++) {
             for (let c = 0; c < GRID_SIZE - 1; c++) {
                 if ((r + 1) % UNIT_ROWS === 0 && (c + 1) % UNIT_COLS === 0) {
-                    centers.push({ r, c });
+                    centers.push({ r: r + 0.5, c: c + 0.5 });
                 }
             }
         }
@@ -370,44 +368,106 @@
         cell.appendChild(span);
     }
 
-    function buildDerivableCells() {
-        const derivable = new Set();
-        for (const cellKey of state.knownCells) {
-            const [r1, c1] = cellKey.split(',').map(Number);
-            for (const { r: rC, c: cC } of SYMMETRY_CENTERS) {
-                const distSq = (r1 - rC) ** 2 + (c1 - cC) ** 2;
-                if (distSq < CFG.MAX_DIST_SQ) {
-                    const r2 = 2 * rC - r1;
-                    const c2 = 2 * cC - c1;
-                    if (r2 >= 0 && r2 < CFG.GRID_SIZE && c2 >= 0 && c2 < CFG.GRID_SIZE) {
-                        derivable.add(`${r2},${c2}`);
+    // Segédfüggvény a célcella kiválasztásához
+    function selectNewTarget() {
+        const { GRID_SIZE, UNIT_ROWS, UNIT_COLS } = CFG;
+        const allCells = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                allCells.push({ r, c });
+            }
+        }
+        
+        // Véletlenszerű sorrend a kereséshez
+        allCells.sort(() => Math.random() - 0.5);
+
+        const currentGoalIndex = state.guessesCompleted + 1;
+
+        // Segédfüggvény: megadja, hogy egy cella melyik téglalapba (r, c index) tartozik
+        const getRectCoords = (r, c) => ({
+            r: Math.floor(r / UNIT_ROWS),
+            c: Math.floor(c / UNIT_COLS)
+        });
+
+        // Segédfüggvény: megadja egy téglalap (r, c) szomszédos téglalapjainak csúcsait (középpontjait)
+        const getRectCorners = (rectR, rectC) => {
+            const corners = [];
+            // Egy téglalap (rectR, rectC) "csúcsai" a rácsban lévő szimmetria középpontok
+            // Ezek: (rectR*UNIT_ROWS - 0.5, rectC*UNIT_COLS - 0.5) stb.
+            for (let dr = 0; dr <= 1; dr++) {
+                for (let dc = 0; dc <= 1; dc++) {
+                    const cr = (rectR + dr) * UNIT_ROWS - 0.5;
+                    const cc = (rectC + dc) * UNIT_COLS - 0.5;
+                    // Csak az érvényes középpontokat adjuk hozzá
+                    if (SYMMETRY_CENTERS.some(p => p.r === cr && p.c === cc)) {
+                        corners.push({ r: cr, c: cc });
                     }
                 }
             }
-        }
-        return derivable;
-    }
+            return corners;
+        };
 
-    function selectNewTarget() {
-        const derivable  = buildDerivableCells();
-        const preferred  = [];
-        const fallback   = [];
+        const getReflectedKey = (r, c, pr, pc) => {
+            const rr = 2 * pr - r;
+            const rc = 2 * pc - c;
+            if (rr >= 0 && rr < GRID_SIZE && rc >= 0 && rc < GRID_SIZE) return `${rr},${rc}`;
+            return null;
+        };
 
-        for (let r = 0; r < CFG.GRID_SIZE; r++) {
-            for (let c = 0; c < CFG.GRID_SIZE; c++) {
-                const cellKey = `${r},${c}`;
-                if (!state.knownCells.has(cellKey)) {
-                    fallback.push({ r, c });
-                    if (!derivable.has(cellKey)) preferred.push({ r, c });
+        for (const cell of allCells) {
+            const cellKey = `${cell.r},${cell.c}`;
+            if (state.knownCells.has(cellKey)) continue;
+
+            const rect = getRectCoords(cell.r, cell.c);
+            let found = false;
+
+            if (currentGoalIndex === 1) {
+                // 1. cella: Saját téglalap csúcsára tükrözve ismert mező
+                const corners = getRectCorners(rect.r, rect.c);
+                if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) found = true;
+
+            } else if (currentGoalIndex === 2 || currentGoalIndex === 3) {
+                // 2-3. cella: Szomszédos téglalap csúcsára tükrözve ismert mező
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
+                        const corners = getRectCorners(rect.r + dr, rect.c + dc);
+                        if (corners.some(p => state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c)))) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
                 }
+
+            } else if (currentGoalIndex === 4) {
+                // 4. cella: Két különböző fekete pöttyre tükrözve ismert mező
+                let count = 0;
+                for (const p of SYMMETRY_CENTERS) {
+                    if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
+                    if (count >= 2) { found = true; break; }
+                }
+
+            } else if (currentGoalIndex === 5) {
+                // 5. cella: Legalább három különböző fekete pöttyre tükrözve ismert mező
+                let count = 0;
+                for (const p of SYMMETRY_CENTERS) {
+                    if (state.knownCells.has(getReflectedKey(cell.r, cell.c, p.r, p.c))) count++;
+                    if (count >= 3) { found = true; break; }
+                }
+            }
+
+            if (found) {
+                state.targetCell = cell;
+                updateGridDisplay();
+                return;
             }
         }
 
-        const pool = preferred.length ? preferred : fallback;
-        if (!pool.length) { if (state.isRunning) endGame(); return; }
-
-        state.targetCell = pool[Math.floor(Math.random() * pool.length)];
-        updateGridDisplay();
+        // Fallback: Ha nem találtunk specifikusat, bármi ami nem ismert
+        state.targetCell = allCells.find(c => !state.knownCells.has(`${c.r},${c.c}`));
+        if (!state.targetCell) endGame();
+        else updateGridDisplay();
     }
 
     function revealInitialCells() {
@@ -417,6 +477,7 @@
                 typeCells[state.gridData[r][c]].push({ r, c });
             }
         }
+        // Minden típusból egy véletlen mező (12 mező összesen)
         typeCells.forEach(cells => {
             const { r, c } = cells[Math.floor(Math.random() * cells.length)];
             const key = `${r},${c}`;
@@ -488,10 +549,6 @@
 
     function updateScoreDisplay() {
         dom.scoreDisplay.textContent = `${STRINGS.scoreLabel} ${state.score} / ${state.guessesCompleted}`;
-        dom.scoreDisplay.classList.remove('text-red-600', 'text-green-600', 'text-slate-700');
-        if (state.score < 0)      dom.scoreDisplay.classList.add('text-red-600');
-        else if (state.score > 0) dom.scoreDisplay.classList.add('text-green-600');
-        else                      dom.scoreDisplay.classList.add('text-slate-700');
     }
 
     function endGame() {
@@ -503,7 +560,7 @@
         dom.modalMessage.innerHTML = `
             ${STRINGS.modalMessageSuccess}
             <br><br>
-            ${STRINGS.modalScore} <strong class="${state.score >= 0 ? 'text-green-600' : 'text-slate-800'}">${state.score} / ${state.guessesCompleted}</strong>
+            ${STRINGS.modalScore} <strong class="text-slate-800">${state.score} / ${state.guessesCompleted}</strong>
             <br>
             ${STRINGS.modalTime} <strong class="text-amber-600">${timeTaken} ${STRINGS.modalSeconds}</strong>
         `;
@@ -538,8 +595,8 @@
                 const mode      = dom.colorPickerModal.dataset.mode;
                 const cellKey   = dom.colorPickerModal.dataset.cellKey;
                 const colorCode = event.currentTarget.dataset.color;
-                if (mode === 'guess')       handleGuess(colorCode);
-                else if (mode === 'paint')  handlePaint(colorCode, cellKey);
+                if (mode === 'guess')        handleGuess(colorCode);
+                else if (mode === 'paint')   handlePaint(colorCode, cellKey);
             };
         });
 
