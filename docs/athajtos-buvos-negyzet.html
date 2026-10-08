@@ -31,6 +31,7 @@
             height: 100px;
             position: relative;
             user-select: none;
+            z-index: 1;
         }
 
         /* Alap cella kártya */
@@ -257,11 +258,13 @@
         let gridState = [];
         let cellWidth = 100;
         let isAnimating = false; // Animáció alatti dupla kattintás megakadályozása
+        let globalFlipCounter = 0; // Számláló a friss áthajtások z-index rétegrendjéhez
 
         
         // Rács inicializálása
         function initGrid() {
             cellWidth = window.innerWidth <= 600 ? 70 : 100;
+            globalFlipCounter = 0;
 
             const gridEl = document.getElementById('grid');
             const rowSumsEl = document.getElementById('row-sums-display');
@@ -277,6 +280,7 @@
                     value: val,
                     originalValue: val,
                     isFoldedOver: false,
+                    flipOrder: 0,
                     valueStack: [],
                     hinge: hinge ? { tr: hinge[2], tc: hinge[3], direction: hinge[4] } : null
                 };
@@ -366,6 +370,7 @@
                 // VISSZAHAJTÁS
                 doorCell.value = doorCell.originalValue;
                 doorCell.isFoldedOver = false;
+                doorCell.flipOrder = 0;
 
                 if (targetCell.valueStack.length > 0) {
                     targetCell.value = targetCell.valueStack.pop();
@@ -374,6 +379,8 @@
                 }
             } else {
                 // ÁTHAJTÁS
+                globalFlipCounter++;
+                doorCell.flipOrder = globalFlipCounter;
                 targetCell.valueStack.push(targetCell.value);
                 doorCell.value = doorCell.originalValue * 2;
                 doorCell.isFoldedOver = true;
@@ -383,11 +390,12 @@
         }
 
 
-        // Rács vizuális állapotának frissítése a 3D transzformációkkal
+        // Rács vizuális állapotának frissítése a 3D transzformációkkal és a helyes z-index rétegrenddel
         function updateGridDisplay() {
             for (let r = 0; r < GRID_SIZE; r++) {
                 for (let c = 0; c < GRID_SIZE; c++) {
                     const cellData = gridState[r][c];
+                    const wrapper = document.getElementById(`cell-wrapper-${r}-${c}`);
                     const baseCard = document.getElementById(`base-card-${r}-${c}`);
                     const flipper = document.getElementById(`flipper-${r}-${c}`);
 
@@ -403,17 +411,25 @@
                         baseCard.textContent = cellData.originalValue;
                     }
 
-                    // 2. Flipper 3D áthajtás frissítése
-                    if (flipper) {
-                        if (cellData.isFoldedOver) {
+                    // 2. Cella konténer és Flipper 3D z-index rétegzettségének frissítése
+                    if (cellData.isFoldedOver) {
+                        // A legfrissebben áthajtott lap kapja a legmagasabb z-indexet (a konténerén és a flipperén is)
+                        const currentZ = 100 + cellData.flipOrder;
+                        if (wrapper) wrapper.style.zIndex = currentZ;
+                        if (flipper) {
                             flipper.classList.add('is-flipped');
-                            flipper.style.zIndex = '30';
-                        } else {
+                            flipper.style.zIndex = currentZ;
+                        }
+                    } else {
+                        if (wrapper) wrapper.style.zIndex = '1';
+                        if (flipper) {
                             flipper.classList.remove('is-flipped');
                             flipper.style.zIndex = '20';
                         }
+                    }
 
-                        // Ha le van fedve, a flipper nem kattintható
+                    // Kezeljük a kattinthatóságot ha le van fedve
+                    if (flipper) {
                         if (cellData.valueStack.length > 0) {
                             flipper.style.pointerEvents = 'none';
                             flipper.style.cursor = 'default';
